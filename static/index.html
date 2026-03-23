@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIM Learning Companion</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Setup Screen -->
+        <div id="setup-screen" class="screen active">
+            <div class="setup-container">
+                <h1>AIM Learning Companion</h1>
+                <p class="subtitle">Compagnon socratique pour l'apprentissage professionnel</p>
+                <div class="setup-form">
+                    <label for="topic-input">Sujet d'exploration</label>
+                    <input type="text" id="topic-input" placeholder="Ex: L'intelligence artificielle en entreprise..." autocomplete="off">
+                    <label for="mode-select">Mode</label>
+                    <div class="mode-selector">
+                        <button class="mode-btn active" data-mode="TUTOR">
+                            <span class="mode-icon">&#9733;</span>
+                            <span class="mode-label">TUTOR</span>
+                            <span class="mode-desc">Accompagnement bienveillant</span>
+                        </button>
+                        <button class="mode-btn" data-mode="CRITIC">
+                            <span class="mode-icon">&#9878;</span>
+                            <span class="mode-label">CRITIC</span>
+                            <span class="mode-desc">Audit logique</span>
+                        </button>
+                    </div>
+                    <button id="start-btn" class="primary-btn" disabled>Commencer la session</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Screen -->
+        <div id="chat-screen" class="screen">
+            <header class="chat-header">
+                <div class="header-left">
+                    <h2>Companion</h2>
+                    <span id="header-mode" class="mode-badge">TUTOR</span>
+                    <span id="header-topic" class="topic-badge"></span>
+                </div>
+                <div class="header-right">
+                    <button id="end-session-btn" class="secondary-btn">Terminer la session</button>
+                    <button id="reset-btn" class="secondary-btn">Reset</button>
+                </div>
+            </header>
+
+            <!-- Phase Indicator -->
+            <div class="phase-indicator">
+                <div class="phase-step" data-phase="0">
+                    <div class="phase-dot"></div>
+                    <span class="phase-label">0 Ciblage</span>
+                </div>
+                <div class="phase-connector"></div>
+                <div class="phase-step" data-phase="1">
+                    <div class="phase-dot"></div>
+                    <span class="phase-label">1 Clarification</span>
+                </div>
+                <div class="phase-connector"></div>
+                <div class="phase-step" data-phase="2">
+                    <div class="phase-dot"></div>
+                    <span class="phase-label">2 Mécanisme</span>
+                </div>
+                <div class="phase-connector"></div>
+                <div class="phase-step" data-phase="3">
+                    <div class="phase-dot"></div>
+                    <span class="phase-label">3 Vérification</span>
+                </div>
+                <div class="phase-connector"></div>
+                <div class="phase-step" data-phase="4">
+                    <div class="phase-dot"></div>
+                    <span class="phase-label">4 Stress-test</span>
+                </div>
+            </div>
+
+            <!-- Chat Messages -->
+            <div id="chat-messages" class="chat-messages"></div>
+
+            <!-- Input Area -->
+            <div class="chat-input-area">
+                <textarea id="chat-input" placeholder="Écris ta réponse ici..." rows="2"></textarea>
+                <button id="send-btn" class="primary-btn">Envoyer</button>
+            </div>
+        </div>
+
+        <!-- Analysis Screen -->
+        <div id="analysis-screen" class="screen">
+            <div class="analysis-container">
+                <h2>Analyse de session</h2>
+                <div id="analysis-loading" class="loading">Analyse en cours...</div>
+                <div id="analysis-content" class="hidden">
+                    <div class="scores-grid" id="scores-grid"></div>
+                    <div class="analysis-section">
+                        <h3>Résumé</h3>
+                        <p id="analysis-summary"></p>
+                    </div>
+                    <div class="analysis-section">
+                        <h3>Points forts</h3>
+                        <ul id="analysis-strengths"></ul>
+                    </div>
+                    <div class="analysis-section">
+                        <h3>Axes d'amélioration</h3>
+                        <ul id="analysis-weaknesses"></ul>
+                    </div>
+                    <div class="analysis-section">
+                        <h3>Rythme</h3>
+                        <p id="analysis-rhythm"></p>
+                    </div>
+                    <div class="analysis-actions">
+                        <button id="export-btn" class="primary-btn">Exporter en JSON</button>
+                        <button id="new-session-btn" class="secondary-btn">Nouvelle session</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
