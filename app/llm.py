@@ -1,10 +1,11 @@
-"""LLM interaction via Ollama."""
+"""LLM interaction via OpenRouter (OpenAI-compatible API)."""
 
 import os
 import httpx
 
-OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-MODEL = "mistral:instruct"
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+MODEL = os.environ.get("LLM_MODEL", "mistralai/mistral-7b-instruct")
 TIMEOUT = 120.0
 
 
@@ -89,22 +90,25 @@ def build_system_prompt(mode: str, topic: str, phase: int, rag_context: list[str
 
 
 async def chat(system_prompt: str, messages: list[dict]) -> str:
-    """Send chat to Ollama and return assistant response."""
-    ollama_messages = [{"role": "system", "content": system_prompt}]
-    ollama_messages.extend(messages)
+    """Send chat to OpenRouter and return assistant response."""
+    api_messages = [{"role": "system", "content": system_prompt}]
+    api_messages.extend(messages)
 
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
         response = await client.post(
-            f"{OLLAMA_BASE_URL}/api/chat",
+            f"{OPENROUTER_BASE_URL}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+            },
             json={
                 "model": MODEL,
-                "messages": ollama_messages,
-                "stream": False,
+                "messages": api_messages,
             },
         )
         response.raise_for_status()
         data = response.json()
-        return data["message"]["content"]
+        return data["choices"][0]["message"]["content"]
 
 
 async def analyze_session(messages: list[dict]) -> dict:

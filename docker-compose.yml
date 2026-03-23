@@ -7,9 +7,8 @@ services:
       - ./corpus:/app/corpus
       - chroma-data:/app/chroma_data
     environment:
-      - OLLAMA_BASE_URL=http://host.docker.internal:11434
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - LLM_MODEL=${LLM_MODEL:-mistralai/mistral-7b-instruct}
     restart: unless-stopped
 
 volumes:
