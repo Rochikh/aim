@@ -1,13 +1,13 @@
 """RAG layer: load corpus, chunk, embed, and retrieve."""
 
 import os
-import re
+
 import chromadb
 from sentence_transformers import SentenceTransformer
 
 CORPUS_DIR = os.environ.get("CORPUS_DIR", "corpus")
 CHROMA_DIR = os.environ.get("CHROMA_DIR", "chroma_data")
-CHUNK_SIZE = 500  # tokens (approximated as words for simplicity)
+CHUNK_SIZE = 500   # approximate token count (words used as proxy)
 CHUNK_OVERLAP = 50
 TOP_K = 3
 
@@ -60,11 +60,11 @@ def load_corpus() -> None:
         is_persistent=True,
     ))
 
-    # Delete and recreate to pick up new documents
     try:
         client.delete_collection("corpus")
     except Exception:
         pass
+
     _collection = client.create_collection(
         name="corpus",
         metadata={"hnsw:space": "cosine"},
@@ -78,7 +78,7 @@ def load_corpus() -> None:
     if not os.path.isdir(CORPUS_DIR):
         return
 
-    for filename in os.listdir(CORPUS_DIR):
+    for filename in sorted(os.listdir(CORPUS_DIR)):
         filepath = os.path.join(CORPUS_DIR, filename)
         if filename.lower().endswith(".txt"):
             text = _read_txt(filepath)
