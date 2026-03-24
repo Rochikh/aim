@@ -603,13 +603,21 @@ body {
 
     /* --- API --- */
     function callLLM(key, sys, msgs) {
+        if (!key || key.length < 10) {
+            return Promise.reject(new Error("Cle API manquante ou invalide (longueur: " + (key ? key.length : 0) + ")"));
+        }
         var body = JSON.stringify({
             model: MODEL,
             messages: [{ role: "system", content: sys }].concat(msgs)
         });
+        var hdrs = new Headers();
+        hdrs.append("Content-Type", "application/json");
+        hdrs.append("Authorization", "Bearer " + key);
+        hdrs.append("HTTP-Referer", "https://rochikh.github.io/aim/");
+        hdrs.append("X-Title", "AIM Learning Companion");
         return fetch(API_URL, {
             method: "POST",
-            headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json", "HTTP-Referer": "https://rochikh.github.io/aim/", "X-Title": "AIM Learning Companion" },
+            headers: hdrs,
             body: body
         }).then(function(r) {
             if (!r.ok) return r.text().then(function(t) { throw new Error("API " + r.status + ": " + t); });
