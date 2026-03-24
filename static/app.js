@@ -13,7 +13,8 @@
         phase: 0,
         history: [],      // {role, content}
         timestamps: [],   // epoch ms for every message (user & assistant alternating)
-        analysisResult: null
+        analysisResult: null,
+        uploadedDocs: []  // filenames uploaded this session
     };
 
     var PHASE_NAMES = [
@@ -35,6 +36,7 @@
 
     var modeBadge   = document.getElementById("mode-badge");
     var topicBadge  = document.getElementById("topic-badge");
+    var docsBadge   = document.getElementById("docs-badge");
     var phaseDots   = document.getElementById("phase-dots");
     var phaseLabels = document.getElementById("phase-labels");
     var messagesEl  = document.getElementById("messages");
@@ -51,6 +53,12 @@
     var rhythmCount = document.getElementById("rhythm-count");
     var btnExport   = document.getElementById("btn-export");
     var btnNewSession = document.getElementById("btn-new-session");
+
+    // Upload refs
+    var uploadZone  = document.getElementById("upload-zone");
+    var fileInput   = document.getElementById("file-input");
+    var uploadList  = document.getElementById("upload-list");
+    var uploadStatus = document.getElementById("upload-status");
 
     /* ===== Screen navigation ===== */
     function showScreen(screen) {
@@ -98,6 +106,133 @@
         typingEl.style.display = on ? "block" : "none";
         if (on) messagesEl.scrollTop = messagesEl.scrollHeight;
     }
+
+    /* ===== File Upload ===== */
+
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + " o";
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " Ko";
+        return (bytes / (1024 * 1024)).toFixed(1) + " Mo";
+    }
+
+    function renderUploadList() {
+        uploadList.innerHTML = "";
+        state.uploadedDocs.forEach(function (doc) {
+            var item = document.createElement("div");
+            item.className = "upload-item";
+
+            var icon = doc.filename.toLowerCase().endsWith(".pdf") ? "PDF" :
+                       doc.filename.toLowerCase().endsWith(".pptx") ? "PPT" :
+                       doc.filename.toLowerCase().endsWith(".ppt") ? "PPT" : "TXT";
+
+            item.innerHTML =
+                '<span class="upload-item-icon">' + icon + '</span>' +
+                '<span class="upload-item-name">' + doc.filename + '</span>' +
+                '<span class="upload-item-chunks">' + doc.chunks + ' chunks</span>' +
+                '<button class="upload-item-delete" data-filename="' + doc.filename + '">X</button>';
+            uploadList.appendChild(item);
+        });
+
+        // Bind delete buttons
+        uploadList.querySelectorAll(".upload-item-delete").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                deleteDoc(btn.dataset.filename);
+            });
+        });
+    }
+
+    function uploadFiles(fileList) {
+        if (!fileList || fileList.length === 0) return;
+
+        var formData = new FormData();
+        for (var i = 0; i < fileList.length; i++) {
+            formData.append("files", fileList[i]);
+        }
+
+        uploadStatus.textContent = "Upload en cours...";
+        uploadStatus.className = "upload-status uploading";
+        uploadZone.classList.add("uploading");
+
+        fetch("/api/upload", {
+            method: "POST",
+            body: formData
+        })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+            uploadZone.classList.remove("uploading");
+            var ok = 0;
+            var errors = [];
+
+            (data.results || []).forEach(function (r) {
+                if (r.status === "ok") {
+                    ok++;
+                    state.uploadedDocs.push({ filename: r.filename, chunks: r.chunks });
+                } else {
+                    errors.push(r.filename + ": " + (r.message || "erreur"));
+                }
+            });
+
+            (data.skipped || []).forEach(function (s) {
+                errors.push(s.filename + ": " + s.reason);
+            });
+
+            if (ok > 0 && errors.length === 0) {
+                uploadStatus.textContent = ok + " fichier(s) ajoute(s) au corpus";
+                uploadStatus.className = "upload-status success";
+            } else if (ok > 0 && errors.length > 0) {
+                uploadStatus.textContent = ok + " OK, " + errors.length + " erreur(s): " + errors.join("; ");
+                uploadStatus.className = "upload-status warning";
+            } else {
+                uploadStatus.textContent = "Erreur: " + errors.join("; ");
+                uploadStatus.className = "upload-status error";
+            }
+
+            renderUploadList();
+        })
+        .catch(function () {
+            uploadZone.classList.remove("uploading");
+            uploadStatus.textContent = "Erreur de connexion. Reessaye.";
+            uploadStatus.className = "upload-status error";
+        });
+    }
+
+    function deleteDoc(filename) {
+        fetch("/api/documents/" + encodeURIComponent(filename), { method: "DELETE" })
+        .then(function (res) { return res.json(); })
+        .then(function () {
+            state.uploadedDocs = state.uploadedDocs.filter(function (d) {
+                return d.filename !== filename;
+            });
+            renderUploadList();
+            uploadStatus.textContent = filename + " supprime";
+            uploadStatus.className = "upload-status success";
+        });
+    }
+
+    // Upload zone events
+    uploadZone.addEventListener("click", function () {
+        fileInput.click();
+    });
+
+    fileInput.addEventListener("change", function () {
+        uploadFiles(fileInput.files);
+        fileInput.value = "";
+    });
+
+    uploadZone.addEventListener("dragover", function (e) {
+        e.preventDefault();
+        uploadZone.classList.add("dragover");
+    });
+
+    uploadZone.addEventListener("dragleave", function () {
+        uploadZone.classList.remove("dragover");
+    });
+
+    uploadZone.addEventListener("drop", function (e) {
+        e.preventDefault();
+        uploadZone.classList.remove("dragover");
+        uploadFiles(e.dataTransfer.files);
+    });
 
     /* ===== API calls ===== */
     function sendMessage(text) {
@@ -232,10 +367,13 @@
         state.history = [];
         state.timestamps = [];
         state.analysisResult = null;
+        state.uploadedDocs = [];
 
         topicInput.value = "";
         chatInput.value = "";
         messagesEl.querySelectorAll(".message").forEach(function (el) { el.remove(); });
+        uploadList.innerHTML = "";
+        uploadStatus.textContent = "";
 
         modeBtns.forEach(function (btn) {
             btn.classList.toggle("selected", btn.dataset.mode === "TUTOR");
@@ -245,7 +383,23 @@
         btnEnd.disabled = false;
         btnSend.disabled = false;
 
+        // Load existing documents
+        loadDocumentList();
+
         showScreen(setupScreen);
+    }
+
+    /* ===== Load existing documents on page load ===== */
+    function loadDocumentList() {
+        fetch("/api/documents")
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+            state.uploadedDocs = (data.documents || []).map(function (d) {
+                return { filename: d.filename, chunks: "?" };
+            });
+            renderUploadList();
+        })
+        .catch(function () {});
     }
 
     /* ===== Event listeners ===== */
@@ -272,6 +426,14 @@
         state.topic = topic;
         modeBadge.textContent = state.mode === "TUTOR" ? "Tuteur" : "Critique";
         topicBadge.textContent = topic;
+
+        // Show doc count badge
+        if (state.uploadedDocs.length > 0) {
+            docsBadge.textContent = state.uploadedDocs.length + " doc(s)";
+            docsBadge.style.display = "inline-block";
+        } else {
+            docsBadge.style.display = "none";
+        }
 
         renderPhaseIndicator();
         showScreen(chatScreen);
@@ -308,5 +470,8 @@
 
     // New session from analysis screen
     btnNewSession.addEventListener("click", resetSession);
+
+    // Load existing docs on startup
+    loadDocumentList();
 
 })();

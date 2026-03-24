@@ -6,4 +6,5 @@ sentence-transformers==3.3.1
 pydantic==2.10.4
 python-multipart==0.0.20
 pypdf2==3.0.1
+python-pptx==1.0.2
 python-dotenv==1.0.1

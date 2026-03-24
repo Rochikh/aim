@@ -127,6 +127,118 @@ body {
 .btn-primary:hover { opacity: 0.9; }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* ===== Upload Zone ===== */
+.upload-zone {
+    width: 100%;
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg-secondary);
+}
+
+.upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--accent);
+    background: var(--bg-tertiary);
+}
+
+.upload-zone.uploading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.upload-icon {
+    font-size: 2rem;
+    color: var(--accent);
+    margin-bottom: 8px;
+    font-weight: 300;
+}
+
+.upload-text {
+    font-size: 0.92rem;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.upload-hint {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+
+.upload-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.upload-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+}
+
+.upload-item-icon {
+    background: var(--accent);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.upload-item-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.upload-item-chunks {
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    flex-shrink: 0;
+}
+
+.upload-item-delete {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    transition: all 0.2s;
+}
+
+.upload-item-delete:hover {
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.upload-status {
+    font-size: 0.82rem;
+    min-height: 1.2em;
+}
+
+.upload-status.success { color: var(--success); }
+.upload-status.warning { color: var(--warning); }
+.upload-status.error { color: var(--danger); }
+.upload-status.uploading { color: var(--accent-light); }
+
+.badge-docs {
+    background: var(--success);
+    color: #fff;
+}
+
 /* ===== Chat Screen ===== */
 #chat-screen {
     height: 100vh;
