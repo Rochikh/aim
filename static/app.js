@@ -438,7 +438,43 @@
         renderPhaseIndicator();
         showScreen(chatScreen);
         chatInput.focus();
+
+        // Auto-send first message to get the companion's opening question
+        startSession();
     });
+
+    function startSession() {
+        setTyping(true);
+        btnSend.disabled = true;
+
+        fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                message: "Bonjour, je souhaite explorer le sujet : " + state.topic,
+                mode: state.mode,
+                topic: state.topic,
+                phase: state.phase,
+                history: []
+            })
+        })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+            setTyping(false);
+            state.phase = data.phase;
+            state.history.push({ role: "assistant", content: data.reply });
+            state.timestamps.push(Date.now());
+            addMessage("assistant", data.reply);
+            renderPhaseIndicator();
+            btnSend.disabled = false;
+            chatInput.focus();
+        })
+        .catch(function () {
+            setTyping(false);
+            addMessage("assistant", "Erreur de connexion. Veuillez reessayer.");
+            btnSend.disabled = false;
+        });
+    }
 
     // Send message
     btnSend.addEventListener("click", function () {
