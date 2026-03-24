@@ -1,3 +1,13 @@
+---
+title: AIM Learning Companion
+emoji: 🎯
+colorFrom: blue
+colorTo: purple
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # AIM - Compagnon socratique d'apprentissage
 
 Moteur de questionnement socratique pour apprenants adultes en formation professionnelle. Applique un protocole strict en 5 phases pour guider la reflexion critique, ancre dans les documents de cours via RAG.
