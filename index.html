@@ -1,480 +1,837 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AIM Learning Companion</title>
-    <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-:root {
-    --bg: #0f1117; --surface: #1a1d27; --surface-2: #242734; --border: #2e3144;
-    --text: #e4e6f0; --text-muted: #8b8fa3; --primary: #6c5ce7; --primary-light: #a29bfe;
-    --accent: #00cec9; --success: #00b894; --warning: #fdcb6e; --danger: #e17055;
-    --radius: 12px; --radius-sm: 8px;
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIM Learning Companion</title>
+<style type="text/css">
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-.screen { display: none; min-height: 100vh; }
-.screen.active { display: flex; flex-direction: column; }
 
-/* Setup */
-.setup-container { max-width: 520px; margin: auto; padding: 2rem; text-align: center; }
-.setup-container h1 { font-size: 2rem; margin-bottom: 0.5rem; background: linear-gradient(135deg, var(--primary-light), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-.subtitle { color: var(--text-muted); margin-bottom: 2.5rem; }
-.setup-form { text-align: left; }
-.setup-form label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; margin-top: 1.25rem; text-transform: uppercase; letter-spacing: 0.05em; }
-.setup-form input { width: 100%; padding: 0.85rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 1rem; outline: none; }
-.setup-form input:focus { border-color: var(--primary); }
-.mode-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.25rem; }
-.mode-btn { background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius); padding: 1.25rem 1rem; cursor: pointer; text-align: center; color: var(--text); transition: all 0.2s; }
-.mode-btn:hover { border-color: var(--primary); }
-.mode-btn.active { border-color: var(--primary); background: rgba(108, 92, 231, 0.1); }
-.mode-icon { font-size: 1.5rem; display: block; margin-bottom: 0.5rem; }
-.mode-label { font-weight: 700; font-size: 0.95rem; display: block; margin-bottom: 0.25rem; }
-.mode-desc { font-size: 0.8rem; color: var(--text-muted); }
-.primary-btn { width: 100%; padding: 0.85rem; background: var(--primary); color: white; border: none; border-radius: var(--radius-sm); font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 2rem; }
-.primary-btn:hover:not(:disabled) { opacity: 0.9; }
-.primary-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.secondary-btn { padding: 0.5rem 1rem; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; }
-.secondary-btn:hover { background: var(--border); }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: #0f1117;
+    color: #e4e6f0;
+    min-height: 100vh;
+}
 
-/* Chat Header */
-.chat-header { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1.5rem; background: var(--surface); border-bottom: 1px solid var(--border); }
-.header-left { display: flex; align-items: center; gap: 0.75rem; }
-.header-left h2 { font-size: 1.1rem; }
-.header-right { display: flex; gap: 0.5rem; }
-.mode-badge { font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.6rem; background: var(--primary); color: white; border-radius: 20px; text-transform: uppercase; }
-.topic-badge { font-size: 0.8rem; color: var(--text-muted); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* === SCREENS === */
+.screen {
+    display: none !important;
+    min-height: 100vh;
+}
+.screen.active {
+    display: flex !important;
+    flex-direction: column;
+}
 
-/* Phase Indicator */
-.phase-indicator { display: flex; align-items: center; justify-content: center; padding: 1rem 1.5rem; background: var(--surface); border-bottom: 1px solid var(--border); }
-.phase-step { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
-.phase-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--border); border: 2px solid var(--border); transition: all 0.3s; }
-.phase-step.active .phase-dot { background: var(--primary); border-color: var(--primary); box-shadow: 0 0 12px rgba(108, 92, 231, 0.5); }
-.phase-step.done .phase-dot { background: var(--success); border-color: var(--success); }
-.phase-label { font-size: 0.7rem; color: var(--text-muted); white-space: nowrap; }
-.phase-step.active .phase-label { color: var(--primary-light); font-weight: 600; }
-.phase-step.done .phase-label { color: var(--success); }
-.phase-connector { width: 40px; height: 2px; background: var(--border); margin: 0 0.25rem; margin-bottom: 1.25rem; }
+/* === SETUP SCREEN === */
+.setup-container {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+}
+.logo {
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 0.4rem;
+    background: linear-gradient(135deg, #a29bfe, #00cec9);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.subtitle {
+    color: #8b8fa3;
+    font-size: 0.95rem;
+    margin-bottom: 2.5rem;
+}
+.setup-form {
+    text-align: left;
+    width: 100%;
+}
+.form-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #8b8fa3;
+    margin-bottom: 0.4rem;
+    margin-top: 1.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+.form-input {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    background-color: #1a1d27;
+    border: 1px solid #2e3144;
+    border-radius: 10px;
+    color: #e4e6f0;
+    font-size: 1rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.form-input:focus {
+    border-color: #6c5ce7;
+}
+.mode-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-top: 0.25rem;
+}
+.mode-card {
+    background-color: #1a1d27;
+    border: 2px solid #2e3144;
+    border-radius: 12px;
+    padding: 1.2rem 0.8rem;
+    cursor: pointer;
+    text-align: center;
+    color: #e4e6f0;
+    transition: all 0.2s;
+    font-family: inherit;
+    font-size: inherit;
+}
+.mode-card:hover {
+    border-color: #6c5ce7;
+    background-color: #1e2130;
+}
+.mode-card.selected {
+    border-color: #6c5ce7;
+    background-color: rgba(108, 92, 231, 0.12);
+}
+.mode-card-icon {
+    font-size: 1.6rem;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+.mode-card-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    display: block;
+    margin-bottom: 0.25rem;
+}
+.mode-card-desc {
+    font-size: 0.78rem;
+    color: #8b8fa3;
+    display: block;
+}
+.btn-primary {
+    width: 100%;
+    padding: 0.85rem;
+    background-color: #6c5ce7;
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 2rem;
+    font-family: inherit;
+    transition: opacity 0.2s;
+}
+.btn-primary:hover:not(:disabled) {
+    opacity: 0.85;
+}
+.btn-primary:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+.btn-secondary {
+    padding: 0.45rem 0.85rem;
+    background-color: #242734;
+    color: #e4e6f0;
+    border: 1px solid #2e3144;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background-color 0.2s;
+}
+.btn-secondary:hover {
+    background-color: #2e3144;
+}
 
-/* Chat */
-.chat-messages { flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
-.message { max-width: 80%; padding: 0.85rem 1.1rem; border-radius: var(--radius); line-height: 1.55; font-size: 0.95rem; white-space: pre-wrap; }
-.message.user { align-self: flex-end; background: var(--primary); color: white; border-bottom-right-radius: 4px; }
-.message.assistant { align-self: flex-start; background: var(--surface-2); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
-.message.system { align-self: center; background: transparent; color: var(--text-muted); font-size: 0.85rem; font-style: italic; text-align: center; }
-.typing-indicator { align-self: flex-start; padding: 0.85rem 1.1rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); border-bottom-left-radius: 4px; color: var(--text-muted); font-style: italic; }
-.chat-input-area { display: flex; gap: 0.75rem; padding: 1rem 1.5rem; background: var(--surface); border-top: 1px solid var(--border); }
-.chat-input-area textarea { flex: 1; padding: 0.75rem 1rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 0.95rem; font-family: inherit; resize: none; outline: none; }
-.chat-input-area textarea:focus { border-color: var(--primary); }
-.chat-input-area .primary-btn { width: auto; margin-top: 0; padding: 0.75rem 1.5rem; }
+/* === CHAT SCREEN === */
+.chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1.25rem;
+    background-color: #1a1d27;
+    border-bottom: 1px solid #2e3144;
+    flex-shrink: 0;
+}
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.header-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+.badge-mode {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.15rem 0.55rem;
+    background-color: #6c5ce7;
+    color: #ffffff;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.badge-topic {
+    font-size: 0.82rem;
+    color: #8b8fa3;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.header-right {
+    display: flex;
+    gap: 0.5rem;
+}
 
-/* Analysis */
-.analysis-container { max-width: 680px; margin: 2rem auto; padding: 2rem; overflow-y: auto; }
-.analysis-container h2 { text-align: center; margin-bottom: 2rem; font-size: 1.5rem; }
-.loading { text-align: center; color: var(--text-muted); padding: 3rem 0; font-style: italic; }
-.hidden { display: none; }
-.scores-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem; }
-.score-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; text-align: center; }
-.score-card .score-value { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; }
-.score-card .score-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; }
-.score-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 0.75rem; overflow: hidden; }
-.score-bar-fill { height: 100%; border-radius: 2px; transition: width 0.8s ease; }
-.analysis-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1rem; }
-.analysis-section h3 { font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.75rem; }
-.analysis-section p { line-height: 1.6; font-size: 0.95rem; }
-.analysis-section ul { list-style: none; padding: 0; }
-.analysis-section li { padding: 0.4rem 0; padding-left: 1.25rem; position: relative; font-size: 0.95rem; }
-.analysis-section li::before { content: ''; position: absolute; left: 0; top: 0.7rem; width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }
-.analysis-actions { display: flex; gap: 1rem; margin-top: 2rem; }
-.analysis-actions .primary-btn, .analysis-actions .secondary-btn { flex: 1; text-align: center; }
+/* === PHASES === */
+.phases-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.85rem 1rem;
+    background-color: #1a1d27;
+    border-bottom: 1px solid #2e3144;
+    flex-shrink: 0;
+    gap: 0;
+}
+.phase-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+}
+.phase-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #2e3144;
+    transition: all 0.3s;
+}
+.phase-item.is-active .phase-dot {
+    background-color: #6c5ce7;
+    box-shadow: 0 0 10px rgba(108, 92, 231, 0.6);
+}
+.phase-item.is-done .phase-dot {
+    background-color: #00b894;
+}
+.phase-name {
+    font-size: 0.65rem;
+    color: #8b8fa3;
+    white-space: nowrap;
+}
+.phase-item.is-active .phase-name {
+    color: #a29bfe;
+    font-weight: 700;
+}
+.phase-item.is-done .phase-name {
+    color: #00b894;
+}
+.phase-line {
+    width: 32px;
+    height: 2px;
+    background-color: #2e3144;
+    margin: 0 0.2rem;
+    margin-bottom: 1.1rem;
+}
+
+/* === MESSAGES === */
+.messages-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.msg {
+    max-width: 78%;
+    padding: 0.8rem 1rem;
+    border-radius: 14px;
+    line-height: 1.55;
+    font-size: 0.93rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+.msg-user {
+    align-self: flex-end;
+    background-color: #6c5ce7;
+    color: #ffffff;
+    border-bottom-right-radius: 4px;
+}
+.msg-assistant {
+    align-self: flex-start;
+    background-color: #242734;
+    border: 1px solid #2e3144;
+    border-bottom-left-radius: 4px;
+}
+.msg-system {
+    align-self: center;
+    background-color: transparent;
+    color: #8b8fa3;
+    font-size: 0.82rem;
+    font-style: italic;
+    text-align: center;
+    max-width: 100%;
+}
+.msg-typing {
+    align-self: flex-start;
+    padding: 0.8rem 1rem;
+    background-color: #242734;
+    border: 1px solid #2e3144;
+    border-radius: 14px;
+    border-bottom-left-radius: 4px;
+    color: #8b8fa3;
+    font-style: italic;
+    font-size: 0.93rem;
+}
+
+/* === INPUT === */
+.input-bar {
+    display: flex;
+    gap: 0.65rem;
+    padding: 0.85rem 1.25rem;
+    background-color: #1a1d27;
+    border-top: 1px solid #2e3144;
+    flex-shrink: 0;
+}
+.input-bar textarea {
+    flex: 1;
+    padding: 0.7rem 0.9rem;
+    background-color: #242734;
+    border: 1px solid #2e3144;
+    border-radius: 10px;
+    color: #e4e6f0;
+    font-size: 0.93rem;
+    font-family: inherit;
+    resize: none;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.input-bar textarea:focus {
+    border-color: #6c5ce7;
+}
+.input-bar .btn-primary {
+    width: auto;
+    margin-top: 0;
+    padding: 0.7rem 1.4rem;
+    flex-shrink: 0;
+}
+
+/* === ANALYSIS SCREEN === */
+.analysis-wrap {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 2rem;
+    overflow-y: auto;
+    flex: 1;
+}
+.analysis-title {
+    text-align: center;
+    margin-bottom: 2rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+.loading-text {
+    text-align: center;
+    color: #8b8fa3;
+    padding: 3rem 0;
+    font-style: italic;
+}
+.hidden {
+    display: none !important;
+}
+.scores-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.85rem;
+    margin-bottom: 1.5rem;
+}
+.score-tile {
+    background-color: #1a1d27;
+    border: 1px solid #2e3144;
+    border-radius: 12px;
+    padding: 1.1rem;
+    text-align: center;
+}
+.score-num {
+    font-size: 2rem;
+    font-weight: 800;
+    margin-bottom: 0.2rem;
+}
+.score-lbl {
+    font-size: 0.72rem;
+    color: #8b8fa3;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.score-track {
+    height: 4px;
+    background-color: #2e3144;
+    border-radius: 2px;
+    margin-top: 0.65rem;
+    overflow: hidden;
+}
+.score-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.8s ease;
+}
+.analysis-card {
+    background-color: #1a1d27;
+    border: 1px solid #2e3144;
+    border-radius: 12px;
+    padding: 1.2rem;
+    margin-bottom: 0.85rem;
+}
+.analysis-card h3 {
+    font-size: 0.8rem;
+    color: #8b8fa3;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.65rem;
+}
+.analysis-card p {
+    line-height: 1.6;
+    font-size: 0.93rem;
+}
+.analysis-card ul {
+    list-style: none;
+    padding: 0;
+}
+.analysis-card li {
+    padding: 0.35rem 0;
+    padding-left: 1.2rem;
+    position: relative;
+    font-size: 0.93rem;
+}
+.analysis-card li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.65rem;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #6c5ce7;
+}
+.analysis-btns {
+    display: flex;
+    gap: 0.85rem;
+    margin-top: 1.5rem;
+}
+.analysis-btns .btn-primary,
+.analysis-btns .btn-secondary {
+    flex: 1;
+    text-align: center;
+}
+
 @media (max-width: 640px) {
-    .scores-grid { grid-template-columns: repeat(2, 1fr); }
-    .phase-label { font-size: 0.6rem; }
-    .phase-connector { width: 20px; }
-    .message { max-width: 90%; }
+    .scores-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .phase-name {
+        font-size: 0.55rem;
+    }
+    .phase-line {
+        width: 16px;
+    }
+    .msg {
+        max-width: 90%;
+    }
 }
-    </style>
+</style>
 </head>
 <body>
-    <div id="app">
-        <!-- Setup Screen -->
-        <div id="setup-screen" class="screen active">
-            <div class="setup-container">
-                <h1>AIM Learning Companion</h1>
-                <p class="subtitle">Compagnon socratique pour l'apprentissage professionnel</p>
-                <div class="setup-form">
-                    <label for="topic-input">Sujet d'exploration</label>
-                    <input type="text" id="topic-input" placeholder="Ex: L'intelligence artificielle en entreprise..." autocomplete="off">
-                    <label>Mode</label>
-                    <div class="mode-selector">
-                        <button class="mode-btn active" data-mode="TUTOR">
-                            <span class="mode-icon">&#9733;</span>
-                            <span class="mode-label">TUTOR</span>
-                            <span class="mode-desc">Accompagnement bienveillant</span>
-                        </button>
-                        <button class="mode-btn" data-mode="CRITIC">
-                            <span class="mode-icon">&#9878;</span>
-                            <span class="mode-label">CRITIC</span>
-                            <span class="mode-desc">Audit logique</span>
-                        </button>
-                    </div>
-                    <label for="api-key-input">Clé API OpenRouter</label>
-                    <input type="password" id="api-key-input" placeholder="sk-or-v1-..." autocomplete="off">
-                    <button id="start-btn" class="primary-btn" disabled>Commencer la session</button>
-                </div>
-            </div>
-        </div>
 
-        <!-- Chat Screen -->
-        <div id="chat-screen" class="screen">
-            <header class="chat-header">
-                <div class="header-left">
-                    <h2>Companion</h2>
-                    <span id="header-mode" class="mode-badge">TUTOR</span>
-                    <span id="header-topic" class="topic-badge"></span>
-                </div>
-                <div class="header-right">
-                    <button id="end-session-btn" class="secondary-btn">Terminer la session</button>
-                    <button id="reset-btn" class="secondary-btn">Reset</button>
-                </div>
-            </header>
-            <div class="phase-indicator">
-                <div class="phase-step" data-phase="0"><div class="phase-dot"></div><span class="phase-label">0 Ciblage</span></div>
-                <div class="phase-connector"></div>
-                <div class="phase-step" data-phase="1"><div class="phase-dot"></div><span class="phase-label">1 Clarification</span></div>
-                <div class="phase-connector"></div>
-                <div class="phase-step" data-phase="2"><div class="phase-dot"></div><span class="phase-label">2 Mécanisme</span></div>
-                <div class="phase-connector"></div>
-                <div class="phase-step" data-phase="3"><div class="phase-dot"></div><span class="phase-label">3 Vérification</span></div>
-                <div class="phase-connector"></div>
-                <div class="phase-step" data-phase="4"><div class="phase-dot"></div><span class="phase-label">4 Stress-test</span></div>
-            </div>
-            <div id="chat-messages" class="chat-messages"></div>
-            <div class="chat-input-area">
-                <textarea id="chat-input" placeholder="Écris ta réponse ici..." rows="2"></textarea>
-                <button id="send-btn" class="primary-btn">Envoyer</button>
-            </div>
-        </div>
+<!-- ============ SETUP ============ -->
+<div id="screen-setup" class="screen active">
+    <div class="setup-container">
+        <div class="logo">AIM Learning Companion</div>
+        <p class="subtitle">Compagnon socratique pour l'apprentissage professionnel</p>
+        <div class="setup-form">
+            <label class="form-label" for="inp-topic">Sujet d'exploration</label>
+            <input class="form-input" type="text" id="inp-topic" placeholder="Ex: L'intelligence artificielle en entreprise..." autocomplete="off">
 
-        <!-- Analysis Screen -->
-        <div id="analysis-screen" class="screen">
-            <div class="analysis-container">
-                <h2>Analyse de session</h2>
-                <div id="analysis-loading" class="loading">Analyse en cours...</div>
-                <div id="analysis-content" class="hidden">
-                    <div class="scores-grid" id="scores-grid"></div>
-                    <div class="analysis-section"><h3>Résumé</h3><p id="analysis-summary"></p></div>
-                    <div class="analysis-section"><h3>Points forts</h3><ul id="analysis-strengths"></ul></div>
-                    <div class="analysis-section"><h3>Axes d'amélioration</h3><ul id="analysis-weaknesses"></ul></div>
-                    <div class="analysis-section"><h3>Rythme</h3><p id="analysis-rhythm"></p></div>
-                    <div class="analysis-actions">
-                        <button id="export-btn" class="primary-btn">Exporter en JSON</button>
-                        <button id="new-session-btn" class="secondary-btn">Nouvelle session</button>
-                    </div>
-                </div>
+            <label class="form-label">Mode</label>
+            <div class="mode-grid">
+                <button class="mode-card selected" data-mode="TUTOR">
+                    <span class="mode-card-icon">&#11088;</span>
+                    <span class="mode-card-title">TUTOR</span>
+                    <span class="mode-card-desc">Accompagnement bienveillant</span>
+                </button>
+                <button class="mode-card" data-mode="CRITIC">
+                    <span class="mode-card-icon">&#9878;&#65039;</span>
+                    <span class="mode-card-title">CRITIC</span>
+                    <span class="mode-card-desc">Audit logique</span>
+                </button>
+            </div>
+
+            <label class="form-label" for="inp-key">Cle API OpenRouter</label>
+            <input class="form-input" type="password" id="inp-key" placeholder="sk-or-v1-..." autocomplete="off">
+
+            <button id="btn-start" class="btn-primary" disabled>Commencer la session</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============ CHAT ============ -->
+<div id="screen-chat" class="screen">
+    <header class="chat-header">
+        <div class="header-left">
+            <span class="header-title">Companion</span>
+            <span id="hdr-mode" class="badge-mode">TUTOR</span>
+            <span id="hdr-topic" class="badge-topic"></span>
+        </div>
+        <div class="header-right">
+            <button id="btn-end" class="btn-secondary">Terminer</button>
+            <button id="btn-reset" class="btn-secondary">Reset</button>
+        </div>
+    </header>
+    <div class="phases-bar">
+        <div class="phase-item" data-p="0"><div class="phase-dot"></div><span class="phase-name">Ciblage</span></div>
+        <div class="phase-line"></div>
+        <div class="phase-item" data-p="1"><div class="phase-dot"></div><span class="phase-name">Clarification</span></div>
+        <div class="phase-line"></div>
+        <div class="phase-item" data-p="2"><div class="phase-dot"></div><span class="phase-name">Mecanisme</span></div>
+        <div class="phase-line"></div>
+        <div class="phase-item" data-p="3"><div class="phase-dot"></div><span class="phase-name">Verification</span></div>
+        <div class="phase-line"></div>
+        <div class="phase-item" data-p="4"><div class="phase-dot"></div><span class="phase-name">Stress-test</span></div>
+    </div>
+    <div id="messages" class="messages-area"></div>
+    <div class="input-bar">
+        <textarea id="inp-msg" placeholder="Ecris ta reponse ici..." rows="2"></textarea>
+        <button id="btn-send" class="btn-primary">Envoyer</button>
+    </div>
+</div>
+
+<!-- ============ ANALYSIS ============ -->
+<div id="screen-analysis" class="screen">
+    <div class="analysis-wrap">
+        <h2 class="analysis-title">Analyse de session</h2>
+        <div id="ana-loading" class="loading-text">Analyse en cours...</div>
+        <div id="ana-content" class="hidden">
+            <div class="scores-row" id="ana-scores"></div>
+            <div class="analysis-card"><h3>Resume</h3><p id="ana-summary"></p></div>
+            <div class="analysis-card"><h3>Points forts</h3><ul id="ana-strengths"></ul></div>
+            <div class="analysis-card"><h3>Axes d'amelioration</h3><ul id="ana-weaknesses"></ul></div>
+            <div class="analysis-card"><h3>Rythme</h3><p id="ana-rhythm"></p></div>
+            <div class="analysis-btns">
+                <button id="btn-export" class="btn-primary">Exporter en JSON</button>
+                <button id="btn-new" class="btn-secondary">Nouvelle session</button>
             </div>
         </div>
     </div>
+</div>
 
 <script>
-// ===================== CONFIG =====================
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const MODEL = "mistralai/mistral-7b-instruct";
+(function() {
+    "use strict";
 
-// ===================== CORPUS (RAG simplifié) =====================
-const CORPUS = [
-    "In professional environments where artificial intelligence systems are deployed, critical thinking becomes an essential competency that goes beyond simple technical understanding. Practitioners must evaluate AI outputs not as ground truth but as probabilistic suggestions shaped by training data, model architecture, and inference parameters. A critical thinker in this domain questions the provenance of training data, identifies potential biases embedded in model outputs, and assesses whether the confidence level reported by an AI system genuinely reflects the reliability of its predictions. This requires a combination of domain expertise, statistical literacy, and epistemological humility — the recognition that even highly performant models can fail in subtle, context-dependent ways.",
-    "The application of critical thinking to AI decision-making in professional training contexts demands structured reasoning frameworks. Professionals must learn to distinguish between correlation and causation when interpreting AI-generated insights, evaluate the external validity of models trained on historical data when applied to novel situations, and recognize the limits of automation in tasks requiring ethical judgment or contextual nuance. Effective critical evaluation also involves stress-testing AI recommendations against edge cases, considering what evidence would falsify a given AI-generated conclusion, and maintaining awareness of the Dunning-Kruger effect — where superficial familiarity with AI tools can create an illusion of deep understanding.",
-    "Building a culture of critical thinking around AI in organizations requires deliberate pedagogical strategies. Rather than passively accepting AI outputs, professionals should be trained to interrogate them through Socratic questioning: What assumptions does this model make? What data was excluded? Under what conditions would this recommendation fail? How would we verify this output independently? These habits of mind transform AI users from passive consumers into active evaluators, creating a more robust and trustworthy integration of artificial intelligence into professional workflows. The goal is not skepticism for its own sake, but informed trust — knowing when to rely on AI systems and when to override them based on principled reasoning."
-];
+    var API_URL = "https://openrouter.ai/api/v1/chat/completions";
+    var MODEL = "mistralai/mistral-7b-instruct";
 
-function retrieveContext(query) {
-    const words = query.toLowerCase().split(/\s+/);
-    const scored = CORPUS.map((chunk, i) => {
-        const lower = chunk.toLowerCase();
-        const score = words.filter(w => w.length > 3 && lower.includes(w)).length;
-        return { chunk, score, i };
-    });
-    scored.sort((a, b) => b.score - a.score);
-    return scored.filter(s => s.score > 0).slice(0, 3).map(s => s.chunk);
-}
-
-// ===================== SYSTEM PROMPTS =====================
-const SYSTEM_TUTOR = `Tu es un mentor socratique bienveillant, empathique et complice.
-Tu utilises systématiquement le "TU" pour t'adresser à l'apprenant·e.
-Ton but est de faire accoucher l'esprit (maïeutique) en guidant la réflexion pas à pas.
-Règles :
-1. Ne dépasse jamais 3 à 4 phrases par message.
-2. Valide l'effort avant de rediriger. Si l'apprenant·e bloque, propose une analogie ou un indice progressif.
-3. Si une définition est demandée, explique en max 2 phrases puis vérifie la compréhension immédiatement.
-4. Dès qu'une base est posée, avance vers Phase 2. Ne reste pas bloqué en Phase 1.
-5. Évite les reproches. Préfère l'invitation : "Ce point semble complexe, essayons un autre angle..."
-À la fin de chaque message, ajoute obligatoirement :
----
-Phase: [Numéro]
-
-Mode : Tuteur (Accompagnement)
-Sujet d'exploration : "{topic}"`;
-
-const SYSTEM_CRITIC = `Tu es un mentor socratique bienveillant, empathique et complice.
-Tu utilises systématiquement le "TU" pour t'adresser à l'apprenant·e.
-Ton but est de faire accoucher l'esprit (maïeutique) en guidant la réflexion pas à pas.
-Règles :
-1. Ne dépasse jamais 3 à 4 phrases par message.
-2. Valide l'effort avant de rediriger. Si l'apprenant·e bloque, propose une analogie ou un indice progressif.
-3. Si une définition est demandée, explique en max 2 phrases puis vérifie la compréhension immédiatement.
-4. Dès qu'une base est posée, avance vers Phase 2. Ne reste pas bloqué en Phase 1.
-5. Évite les reproches. Préfère l'invitation : "Ce point semble complexe, essayons un autre angle..."
-À la fin de chaque message, ajoute obligatoirement :
----
-Phase: [Numéro]
-
-Mode : Critique (Audit Logique)
-Ta mission : proposer des raisonnements fallacieux pour tester la vigilance. Reste un partenaire de jeu élégant, jamais méprisant.
-Sujet d'exploration : "{topic}"`;
-
-const PHASE_GUIDANCE = {
-    0: "Phase actuelle: 0 (Ciblage). Identifie l'objet exact de l'interrogation et l'intention de l'apprenant·e.",
-    1: "Phase actuelle: 1 (Clarification). Fais émerger les ambiguïtés conceptuelles, définis les termes rigoureusement.",
-    2: "Phase actuelle: 2 (Mécanisme). Explore les relations cause-effet. 'Comment ça marche ?'",
-    3: "Phase actuelle: 3 (Vérification). Pousse vers des preuves, critères testables, protocoles de preuve.",
-    4: "Phase actuelle: 4 (Stress-test). Confronte le raisonnement avec des contre-exemples et des limites.",
-};
-
-const STRATEGIES = ["clarification","test_necessite","contre_exemple","prediction","falsifiabilite","mecanisme_causal","changement_cadre","compression","concession_controlee"];
-
-const ANALYSIS_SYSTEM = `Tu es un évaluateur pédagogique. Analyse la conversation suivante entre un mentor socratique et un apprenant.
-Produis un JSON strict avec cette structure :
-{
-  "reasoningScore": <0-100>,
-  "clarityScore": <0-100>,
-  "skepticismScore": <0-100>,
-  "processScore": <0-100>,
-  "reflectionScore": <0-100>,
-  "integrityScore": <0-100>,
-  "summary": "<150 mots max : évaluation de la progression cognitive>",
-  "keyStrengths": ["...", "..."],
-  "weaknesses": ["...", "..."]
-}
-Réponds UNIQUEMENT avec le JSON, sans texte autour.`;
-
-function buildSystemPrompt(mode, topic, phase, ragChunks) {
-    let sys = (mode === "TUTOR" ? SYSTEM_TUTOR : SYSTEM_CRITIC).replace("{topic}", topic);
-    sys += "\n\n" + (PHASE_GUIDANCE[phase] || PHASE_GUIDANCE[0]);
-    sys += "\n\nStratégies socratiques disponibles : " + STRATEGIES.join(", ") + ". Choisis la plus pertinente pour ce tour.";
-    if (ragChunks.length > 0) {
-        sys += "\n\nContexte documentaire (utilise-le pour ancrer tes questions, ne le montre PAS directement à l'apprenant·e) :\n" + ragChunks.join("\n---\n");
-    }
-    return sys;
-}
-
-// ===================== API CALL =====================
-async function callLLM(apiKey, systemPrompt, messages) {
-    const apiMessages = [{ role: "system", content: systemPrompt }, ...messages];
-    const resp = await fetch(OPENROUTER_URL, {
-        method: "POST",
-        headers: {
-            "Authorization": "Bearer " + apiKey,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ model: MODEL, messages: apiMessages }),
-    });
-    if (!resp.ok) {
-        const err = await resp.text();
-        throw new Error("API error " + resp.status + ": " + err);
-    }
-    const data = await resp.json();
-    return data.choices[0].message.content;
-}
-
-// ===================== STATE =====================
-const state = { mode: "TUTOR", topic: "", phase: 0, history: [], timestamps: [], sending: false, apiKey: "" };
-
-// ===================== DOM =====================
-const $ = sel => document.querySelector(sel);
-const setupScreen = $("#setup-screen"), chatScreen = $("#chat-screen"), analysisScreen = $("#analysis-screen");
-const topicInput = $("#topic-input"), apiKeyInput = $("#api-key-input"), startBtn = $("#start-btn");
-const chatMessages = $("#chat-messages"), chatInput = $("#chat-input"), sendBtn = $("#send-btn");
-
-function checkStartReady() {
-    startBtn.disabled = !(topicInput.value.trim() && apiKeyInput.value.trim());
-}
-topicInput.addEventListener("input", checkStartReady);
-apiKeyInput.addEventListener("input", checkStartReady);
-
-// Mode buttons
-document.querySelectorAll(".mode-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-        document.querySelectorAll(".mode-btn").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        state.mode = btn.dataset.mode;
-    });
-});
-
-// Start
-startBtn.addEventListener("click", () => {
-    state.topic = topicInput.value.trim();
-    state.apiKey = apiKeyInput.value.trim();
-    if (!state.topic || !state.apiKey) return;
-    state.phase = 0; state.history = []; state.timestamps = [];
-    $("#header-mode").textContent = state.mode;
-    $("#header-topic").textContent = state.topic;
-    showScreen("chat");
-    updatePhaseIndicator();
-    addSystemMessage("Session démarrée — Mode: " + state.mode + " — Sujet: " + state.topic);
-    sendMessage("Je souhaite explorer le sujet suivant : " + state.topic);
-});
-
-// Send
-sendBtn.addEventListener("click", () => sendUserMessage());
-chatInput.addEventListener("keydown", e => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendUserMessage(); }
-});
-
-function sendUserMessage() {
-    const text = chatInput.value.trim();
-    if (!text || state.sending) return;
-    chatInput.value = "";
-    addMessage("user", text);
-    state.timestamps.push(Date.now() / 1000);
-    sendMessage(text);
-}
-
-async function sendMessage(text) {
-    state.sending = true;
-    sendBtn.disabled = true;
-    chatInput.disabled = true;
-
-    const typing = document.createElement("div");
-    typing.className = "typing-indicator";
-    typing.textContent = "Companion réfléchit...";
-    chatMessages.appendChild(typing);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-
-    try {
-        const ragChunks = retrieveContext(text);
-        const systemPrompt = buildSystemPrompt(state.mode, state.topic, state.phase, ragChunks);
-        const messages = [...state.history, { role: "user", content: text }];
-        const reply = await callLLM(state.apiKey, systemPrompt, messages);
-
-        typing.remove();
-
-        // Detect phase
-        const phaseMatch = reply.match(/Phase:\s*(\d)/);
-        if (phaseMatch) state.phase = parseInt(phaseMatch[1]);
-        updatePhaseIndicator();
-
-        state.history.push({ role: "user", content: text });
-        state.history.push({ role: "assistant", content: reply });
-        state.timestamps.push(Date.now() / 1000);
-
-        addMessage("assistant", reply);
-    } catch (err) {
-        typing.remove();
-        addSystemMessage("Erreur: " + err.message);
-    } finally {
-        state.sending = false;
-        sendBtn.disabled = false;
-        chatInput.disabled = false;
-        chatInput.focus();
-    }
-}
-
-// End session
-$("#end-session-btn").addEventListener("click", async () => {
-    if (state.history.length === 0) { addSystemMessage("Aucun message dans la session."); return; }
-    showScreen("analysis");
-    $("#analysis-loading").classList.remove("hidden");
-    $("#analysis-content").classList.add("hidden");
-
-    try {
-        const convText = state.history.map(m =>
-            (m.role === "user" ? "Apprenant" : "Companion") + ": " + m.content
-        ).join("\n");
-        const raw = await callLLM(state.apiKey, ANALYSIS_SYSTEM, [
-            { role: "user", content: "Voici la conversation à analyser :\n\n" + convText }
-        ]);
-        const start = raw.indexOf("{"), end = raw.lastIndexOf("}") + 1;
-        let analysis = {};
-        if (start >= 0 && end > start) {
-            try { analysis = JSON.parse(raw.substring(start, end)); } catch(e) {}
-        }
-        // Rhythm breaks
-        let rhythmBreaks = 0;
-        for (let i = 1; i < state.timestamps.length; i += 2) {
-            if (i + 1 < state.timestamps.length && state.timestamps[i + 1] - state.timestamps[i] < 8) rhythmBreaks++;
-        }
-        analysis.rhythmBreakCount = rhythmBreaks;
-        displayAnalysis(analysis);
-    } catch (err) {
-        $("#analysis-loading").textContent = "Erreur: " + err.message;
-    }
-});
-
-function displayAnalysis(data) {
-    $("#analysis-loading").classList.add("hidden");
-    $("#analysis-content").classList.remove("hidden");
-    const scores = [
-        { key: "reasoningScore", label: "Raisonnement", color: "#6c5ce7" },
-        { key: "clarityScore", label: "Clarté", color: "#00cec9" },
-        { key: "skepticismScore", label: "Scepticisme", color: "#e17055" },
-        { key: "processScore", label: "Processus", color: "#00b894" },
-        { key: "reflectionScore", label: "Réflexion", color: "#fdcb6e" },
-        { key: "integrityScore", label: "Intégrité", color: "#a29bfe" },
+    /* --- RAG corpus --- */
+    var CORPUS = [
+        "In professional environments where artificial intelligence systems are deployed, critical thinking becomes an essential competency that goes beyond simple technical understanding. Practitioners must evaluate AI outputs not as ground truth but as probabilistic suggestions shaped by training data, model architecture, and inference parameters. A critical thinker in this domain questions the provenance of training data, identifies potential biases embedded in model outputs, and assesses whether the confidence level reported by an AI system genuinely reflects the reliability of its predictions.",
+        "The application of critical thinking to AI decision-making in professional training contexts demands structured reasoning frameworks. Professionals must learn to distinguish between correlation and causation when interpreting AI-generated insights, evaluate the external validity of models trained on historical data when applied to novel situations, and recognize the limits of automation in tasks requiring ethical judgment or contextual nuance.",
+        "Building a culture of critical thinking around AI in organizations requires deliberate pedagogical strategies. Rather than passively accepting AI outputs, professionals should be trained to interrogate them through Socratic questioning: What assumptions does this model make? What data was excluded? Under what conditions would this recommendation fail? How would we verify this output independently?"
     ];
-    const grid = $("#scores-grid");
-    grid.innerHTML = "";
-    scores.forEach(({ key, label, color }) => {
-        const val = data[key] || 0;
-        const card = document.createElement("div");
-        card.className = "score-card";
-        card.innerHTML = `<div class="score-value" style="color:${color}">${val}</div><div class="score-label">${label}</div><div class="score-bar"><div class="score-bar-fill" style="width:${val}%;background:${color}"></div></div>`;
-        grid.appendChild(card);
+
+    function retrieveContext(query) {
+        var words = query.toLowerCase().split(/\s+/);
+        var scored = [];
+        for (var i = 0; i < CORPUS.length; i++) {
+            var lower = CORPUS[i].toLowerCase();
+            var score = 0;
+            for (var j = 0; j < words.length; j++) {
+                if (words[j].length > 3 && lower.indexOf(words[j]) >= 0) score++;
+            }
+            if (score > 0) scored.push({ chunk: CORPUS[i], score: score });
+        }
+        scored.sort(function(a, b) { return b.score - a.score; });
+        return scored.slice(0, 3).map(function(s) { return s.chunk; });
+    }
+
+    /* --- System prompts --- */
+    var SYSTEM_TUTOR = "Tu es un mentor socratique bienveillant, empathique et complice.\nTu utilises systematiquement le \"TU\" pour t'adresser a l'apprenant.\nTon but est de faire accoucher l'esprit (maieutique) en guidant la reflexion pas a pas.\nRegles :\n1. Ne depasse jamais 3 a 4 phrases par message.\n2. Valide l'effort avant de rediriger. Si l'apprenant bloque, propose une analogie ou un indice progressif.\n3. Si une definition est demandee, explique en max 2 phrases puis verifie la comprehension immediatement.\n4. Des qu'une base est posee, avance vers Phase 2. Ne reste pas bloque en Phase 1.\n5. Evite les reproches. Prefere l'invitation.\nA la fin de chaque message, ajoute obligatoirement :\n---\nPhase: [Numero]\n\nMode : Tuteur (Accompagnement)";
+
+    var SYSTEM_CRITIC = "Tu es un mentor socratique bienveillant, empathique et complice.\nTu utilises systematiquement le \"TU\" pour t'adresser a l'apprenant.\nTon but est de faire accoucher l'esprit (maieutique) en guidant la reflexion pas a pas.\nRegles :\n1. Ne depasse jamais 3 a 4 phrases par message.\n2. Valide l'effort avant de rediriger.\n3. Si une definition est demandee, explique en max 2 phrases puis verifie la comprehension immediatement.\n4. Des qu'une base est posee, avance vers Phase 2.\n5. Evite les reproches.\nA la fin de chaque message, ajoute obligatoirement :\n---\nPhase: [Numero]\n\nMode : Critique (Audit Logique)\nTa mission : proposer des raisonnements fallacieux pour tester la vigilance. Reste un partenaire de jeu elegant, jamais meprisant.";
+
+    var PHASE_DESC = [
+        "Phase actuelle: 0 (Ciblage). Identifie l'objet exact de l'interrogation.",
+        "Phase actuelle: 1 (Clarification). Fais emerger les ambiguites conceptuelles.",
+        "Phase actuelle: 2 (Mecanisme). Explore les relations cause-effet.",
+        "Phase actuelle: 3 (Verification). Pousse vers des preuves et criteres testables.",
+        "Phase actuelle: 4 (Stress-test). Confronte le raisonnement avec des contre-exemples."
+    ];
+
+    var STRATEGIES = "clarification, test_necessite, contre_exemple, prediction, falsifiabilite, mecanisme_causal, changement_cadre, compression, concession_controlee";
+
+    var ANALYSIS_SYSTEM = "Tu es un evaluateur pedagogique. Analyse la conversation suivante entre un mentor socratique et un apprenant.\nProduis un JSON strict avec cette structure :\n{\"reasoningScore\": 0, \"clarityScore\": 0, \"skepticismScore\": 0, \"processScore\": 0, \"reflectionScore\": 0, \"integrityScore\": 0, \"summary\": \"\", \"keyStrengths\": [], \"weaknesses\": []}\nRemplis chaque score de 0 a 100. Reponds UNIQUEMENT avec le JSON, sans texte autour.";
+
+    function buildSystem(mode, topic, phase, rag) {
+        var s = (mode === "TUTOR" ? SYSTEM_TUTOR : SYSTEM_CRITIC);
+        s += "\nSujet d'exploration : " + topic;
+        s += "\n\n" + (PHASE_DESC[phase] || PHASE_DESC[0]);
+        s += "\n\nStrategies socratiques : " + STRATEGIES;
+        if (rag.length > 0) {
+            s += "\n\nContexte documentaire (ne le montre PAS directement) :\n" + rag.join("\n---\n");
+        }
+        return s;
+    }
+
+    /* --- API --- */
+    function callLLM(key, sys, msgs) {
+        var body = JSON.stringify({
+            model: MODEL,
+            messages: [{ role: "system", content: sys }].concat(msgs)
+        });
+        return fetch(API_URL, {
+            method: "POST",
+            headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json" },
+            body: body
+        }).then(function(r) {
+            if (!r.ok) return r.text().then(function(t) { throw new Error("API " + r.status + ": " + t); });
+            return r.json();
+        }).then(function(d) {
+            return d.choices[0].message.content;
+        });
+    }
+
+    /* --- State --- */
+    var S = { mode: "TUTOR", topic: "", phase: 0, history: [], ts: [], sending: false, key: "" };
+
+    /* --- DOM refs --- */
+    var screenSetup = document.getElementById("screen-setup");
+    var screenChat = document.getElementById("screen-chat");
+    var screenAnalysis = document.getElementById("screen-analysis");
+    var inpTopic = document.getElementById("inp-topic");
+    var inpKey = document.getElementById("inp-key");
+    var btnStart = document.getElementById("btn-start");
+    var messagesEl = document.getElementById("messages");
+    var inpMsg = document.getElementById("inp-msg");
+    var btnSend = document.getElementById("btn-send");
+
+    function showScreen(name) {
+        screenSetup.classList.remove("active");
+        screenChat.classList.remove("active");
+        screenAnalysis.classList.remove("active");
+        if (name === "setup") screenSetup.classList.add("active");
+        else if (name === "chat") screenChat.classList.add("active");
+        else if (name === "analysis") screenAnalysis.classList.add("active");
+    }
+
+    /* --- Setup --- */
+    function checkReady() {
+        btnStart.disabled = !(inpTopic.value.trim() && inpKey.value.trim());
+    }
+    inpTopic.addEventListener("input", checkReady);
+    inpKey.addEventListener("input", checkReady);
+
+    var modeCards = document.querySelectorAll(".mode-card");
+    for (var i = 0; i < modeCards.length; i++) {
+        modeCards[i].addEventListener("click", function() {
+            for (var j = 0; j < modeCards.length; j++) modeCards[j].classList.remove("selected");
+            this.classList.add("selected");
+            S.mode = this.getAttribute("data-mode");
+        });
+    }
+
+    btnStart.addEventListener("click", function() {
+        S.topic = inpTopic.value.trim();
+        S.key = inpKey.value.trim();
+        if (!S.topic || !S.key) return;
+        S.phase = 0;
+        S.history = [];
+        S.ts = [];
+        document.getElementById("hdr-mode").textContent = S.mode;
+        document.getElementById("hdr-topic").textContent = S.topic;
+        showScreen("chat");
+        updatePhases();
+        addMsg("system", "Session demarree - Mode: " + S.mode + " - Sujet: " + S.topic);
+        doSend("Je souhaite explorer le sujet suivant : " + S.topic);
     });
-    $("#analysis-summary").textContent = data.summary || "Aucune analyse disponible.";
-    const sl = $("#analysis-strengths"); sl.innerHTML = "";
-    (data.keyStrengths || []).forEach(s => { const li = document.createElement("li"); li.textContent = s; sl.appendChild(li); });
-    const wl = $("#analysis-weaknesses"); wl.innerHTML = "";
-    (data.weaknesses || []).forEach(w => { const li = document.createElement("li"); li.textContent = w; wl.appendChild(li); });
-    $("#analysis-rhythm").textContent = "Nombre de réponses avec un rythme anormalement rapide (< 8s) : " + (data.rhythmBreakCount || 0);
-}
 
-// Export
-$("#export-btn").addEventListener("click", () => {
-    const blob = new Blob([JSON.stringify({ topic: state.topic, mode: state.mode, history: state.history, timestamps: state.timestamps, exportedAt: new Date().toISOString() }, null, 2)], { type: "application/json" });
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "aim-session-" + Date.now() + ".json"; a.click();
-});
+    /* --- Phases --- */
+    function updatePhases() {
+        var items = document.querySelectorAll(".phase-item");
+        for (var i = 0; i < items.length; i++) {
+            var p = parseInt(items[i].getAttribute("data-p"));
+            items[i].classList.remove("is-active", "is-done");
+            if (p === S.phase) items[i].classList.add("is-active");
+            else if (p < S.phase) items[i].classList.add("is-done");
+        }
+    }
 
-// Reset
-$("#reset-btn").addEventListener("click", () => {
-    if (!confirm("Réinitialiser la session ?")) return;
-    resetState(); showScreen("setup");
-});
-$("#new-session-btn").addEventListener("click", () => { resetState(); showScreen("setup"); });
+    /* --- Messages --- */
+    function addMsg(type, text) {
+        var div = document.createElement("div");
+        if (type === "user") div.className = "msg msg-user";
+        else if (type === "assistant") div.className = "msg msg-assistant";
+        else div.className = "msg msg-system";
+        div.textContent = text;
+        messagesEl.appendChild(div);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
 
-function resetState() { state.phase = 0; state.history = []; state.timestamps = []; chatMessages.innerHTML = ""; topicInput.value = ""; startBtn.disabled = true; }
-function showScreen(name) {
-    [setupScreen, chatScreen, analysisScreen].forEach(s => s.classList.remove("active"));
-    if (name === "setup") setupScreen.classList.add("active");
-    else if (name === "chat") chatScreen.classList.add("active");
-    else if (name === "analysis") analysisScreen.classList.add("active");
-}
-function updatePhaseIndicator() {
-    document.querySelectorAll(".phase-step").forEach(step => {
-        const p = parseInt(step.dataset.phase);
-        step.classList.remove("active", "done");
-        if (p === state.phase) step.classList.add("active");
-        else if (p < state.phase) step.classList.add("done");
+    /* --- Send --- */
+    btnSend.addEventListener("click", function() { sendUserMsg(); });
+    inpMsg.addEventListener("keydown", function(e) {
+        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendUserMsg(); }
     });
-}
-function addMessage(role, content) {
-    const div = document.createElement("div"); div.className = "message " + role; div.textContent = content;
-    chatMessages.appendChild(div); chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-function addSystemMessage(text) {
-    const div = document.createElement("div"); div.className = "message system"; div.textContent = text;
-    chatMessages.appendChild(div); chatMessages.scrollTop = chatMessages.scrollHeight;
-}
+
+    function sendUserMsg() {
+        var t = inpMsg.value.trim();
+        if (!t || S.sending) return;
+        inpMsg.value = "";
+        addMsg("user", t);
+        S.ts.push(Date.now() / 1000);
+        doSend(t);
+    }
+
+    function doSend(text) {
+        S.sending = true;
+        btnSend.disabled = true;
+        inpMsg.disabled = true;
+
+        var typing = document.createElement("div");
+        typing.className = "msg-typing";
+        typing.textContent = "Companion reflechit...";
+        messagesEl.appendChild(typing);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+
+        var rag = retrieveContext(text);
+        var sys = buildSystem(S.mode, S.topic, S.phase, rag);
+        var apiMsgs = S.history.concat([{ role: "user", content: text }]);
+
+        callLLM(S.key, sys, apiMsgs).then(function(reply) {
+            if (typing.parentNode) typing.parentNode.removeChild(typing);
+            var m = reply.match(/Phase:\s*(\d)/);
+            if (m) { S.phase = parseInt(m[1]); updatePhases(); }
+            S.history.push({ role: "user", content: text });
+            S.history.push({ role: "assistant", content: reply });
+            S.ts.push(Date.now() / 1000);
+            addMsg("assistant", reply);
+        }).catch(function(err) {
+            if (typing.parentNode) typing.parentNode.removeChild(typing);
+            addMsg("system", "Erreur: " + err.message);
+        }).finally(function() {
+            S.sending = false;
+            btnSend.disabled = false;
+            inpMsg.disabled = false;
+            inpMsg.focus();
+        });
+    }
+
+    /* --- End session --- */
+    document.getElementById("btn-end").addEventListener("click", function() {
+        if (S.history.length === 0) { addMsg("system", "Aucun message."); return; }
+        showScreen("analysis");
+        document.getElementById("ana-loading").classList.remove("hidden");
+        document.getElementById("ana-content").classList.add("hidden");
+
+        var conv = S.history.map(function(m) {
+            return (m.role === "user" ? "Apprenant" : "Companion") + ": " + m.content;
+        }).join("\n");
+
+        callLLM(S.key, ANALYSIS_SYSTEM, [{ role: "user", content: "Conversation:\n\n" + conv }]).then(function(raw) {
+            var s = raw.indexOf("{"), e = raw.lastIndexOf("}") + 1;
+            var data = {};
+            if (s >= 0 && e > s) { try { data = JSON.parse(raw.substring(s, e)); } catch(x) {} }
+            var fast = 0;
+            for (var i = 1; i < S.ts.length; i += 2) {
+                if (i + 1 < S.ts.length && S.ts[i + 1] - S.ts[i] < 8) fast++;
+            }
+            data.rhythmBreaks = fast;
+            showAnalysis(data);
+        }).catch(function(err) {
+            document.getElementById("ana-loading").textContent = "Erreur: " + err.message;
+        });
+    });
+
+    function showAnalysis(d) {
+        document.getElementById("ana-loading").classList.add("hidden");
+        document.getElementById("ana-content").classList.remove("hidden");
+
+        var defs = [
+            { k: "reasoningScore", l: "Raisonnement", c: "#6c5ce7" },
+            { k: "clarityScore", l: "Clarte", c: "#00cec9" },
+            { k: "skepticismScore", l: "Scepticisme", c: "#e17055" },
+            { k: "processScore", l: "Processus", c: "#00b894" },
+            { k: "reflectionScore", l: "Reflexion", c: "#fdcb6e" },
+            { k: "integrityScore", l: "Integrite", c: "#a29bfe" }
+        ];
+        var grid = document.getElementById("ana-scores");
+        grid.innerHTML = "";
+        for (var i = 0; i < defs.length; i++) {
+            var v = d[defs[i].k] || 0;
+            var tile = document.createElement("div");
+            tile.className = "score-tile";
+            tile.innerHTML = '<div class="score-num" style="color:' + defs[i].c + '">' + v + '</div><div class="score-lbl">' + defs[i].l + '</div><div class="score-track"><div class="score-fill" style="width:' + v + '%;background:' + defs[i].c + '"></div></div>';
+            grid.appendChild(tile);
+        }
+        document.getElementById("ana-summary").textContent = d.summary || "Pas d'analyse disponible.";
+
+        var sl = document.getElementById("ana-strengths"); sl.innerHTML = "";
+        var strengths = d.keyStrengths || [];
+        for (var i = 0; i < strengths.length; i++) {
+            var li = document.createElement("li"); li.textContent = strengths[i]; sl.appendChild(li);
+        }
+        var wl = document.getElementById("ana-weaknesses"); wl.innerHTML = "";
+        var weaks = d.weaknesses || [];
+        for (var i = 0; i < weaks.length; i++) {
+            var li = document.createElement("li"); li.textContent = weaks[i]; wl.appendChild(li);
+        }
+        document.getElementById("ana-rhythm").textContent = "Reponses trop rapides (< 8s) : " + (d.rhythmBreaks || 0);
+    }
+
+    /* --- Export --- */
+    document.getElementById("btn-export").addEventListener("click", function() {
+        var blob = new Blob([JSON.stringify({ topic: S.topic, mode: S.mode, history: S.history, timestamps: S.ts, exported: new Date().toISOString() }, null, 2)], { type: "application/json" });
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "aim-session-" + Date.now() + ".json";
+        a.click();
+    });
+
+    /* --- Reset / New --- */
+    document.getElementById("btn-reset").addEventListener("click", function() {
+        if (!confirm("Reinitialiser la session ?")) return;
+        resetAll(); showScreen("setup");
+    });
+    document.getElementById("btn-new").addEventListener("click", function() {
+        resetAll(); showScreen("setup");
+    });
+
+    function resetAll() {
+        S.phase = 0; S.history = []; S.ts = [];
+        messagesEl.innerHTML = "";
+        inpTopic.value = "";
+        btnStart.disabled = true;
+    }
+
+})();
 </script>
 </body>
 </html>
