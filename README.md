@@ -50,6 +50,19 @@ ollama pull mistral:instruct
 ollama serve
 ```
 
+## Deploiement en ligne (Render)
+
+Pour une demo accessible via URL publique :
+
+1. Creer un compte sur [render.com](https://render.com)
+2. **New > Blueprint** et connecter ce repo GitHub
+3. Render detecte le `render.yaml` et configure le service automatiquement
+4. Dans le dashboard Render, ajouter la variable d'environnement :
+   - `OPENROUTER_API_KEY` = votre cle OpenRouter
+5. Cliquer **Deploy** — l'URL publique sera disponible en quelques minutes
+
+Le plan **Starter** ($7/mois) est recommande (le free tier a 512 Mo de RAM, insuffisant pour sentence-transformers). Le disque persistant (1 Go) stocke les embeddings ChromaDB.
+
 ## Migration vers deploiement local
 
 L'application est concue pour rendre la migration triviale :
