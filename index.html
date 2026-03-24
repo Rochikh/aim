@@ -609,7 +609,7 @@ body {
         });
         return fetch(API_URL, {
             method: "POST",
-            headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json" },
+            headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json", "HTTP-Referer": "https://rochikh.github.io/aim/", "X-Title": "AIM Learning Companion" },
             body: body
         }).then(function(r) {
             if (!r.ok) return r.text().then(function(t) { throw new Error("API " + r.status + ": " + t); });
