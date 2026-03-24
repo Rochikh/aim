@@ -50,18 +50,21 @@ ollama pull mistral:instruct
 ollama serve
 ```
 
-## Deploiement en ligne (Render)
+## Deploiement en ligne (Hugging Face Spaces)
 
-Pour une demo accessible via URL publique :
+Pour une demo accessible via URL publique, gratuite, sans carte bancaire :
 
-1. Creer un compte sur [render.com](https://render.com)
-2. **New > Blueprint** et connecter ce repo GitHub
-3. Render detecte le `render.yaml` et configure le service automatiquement
-4. Dans le dashboard Render, ajouter la variable d'environnement :
+1. Creer un compte sur [huggingface.co](https://huggingface.co)
+2. **New Space** > choisir **Docker** comme SDK
+3. Connecter le repo GitHub ou pousser le code directement
+4. Dans **Settings > Variables and secrets**, ajouter comme **secrets** :
    - `OPENROUTER_API_KEY` = votre cle OpenRouter
-5. Cliquer **Deploy** — l'URL publique sera disponible en quelques minutes
+   - `LLM_BASE_URL` = `https://openrouter.ai/api/v1`
+   - `LLM_MODEL` = `mistralai/mistral-7b-instruct`
+5. Le Space se build et deploie automatiquement
+6. URL publique : `https://votre-nom-aim.hf.space`
 
-Le plan **Starter** ($7/mois) est recommande (le free tier a 512 Mo de RAM, insuffisant pour sentence-transformers). Le disque persistant (1 Go) stocke les embeddings ChromaDB.
+Free tier : 2 Go RAM, 16 Go disque — suffisant pour sentence-transformers + ChromaDB.
 
 ## Migration vers deploiement local
 
