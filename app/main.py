@@ -80,7 +80,18 @@ def _detect_phase(reply: str, current_phase: int) -> int:
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def api_chat(req: ChatRequest):
+    import os
+    api_key = os.environ.get("OPENROUTER_API_KEY", "")
+    base_url = os.environ.get("LLM_BASE_URL", "")
+    model = os.environ.get("LLM_MODEL", "")
+    if not api_key:
+        logger.error("OPENROUTER_API_KEY is not set!")
+        return JSONResponse(status_code=500, content={"error": "Cle API non configuree (OPENROUTER_API_KEY manquant)"})
+    if not base_url:
+        logger.warning("LLM_BASE_URL is not set, will use OpenAI default")
+
     try:
+        logger.info(f"Chat request: mode={req.mode}, topic={req.topic[:50]}, phase={req.phase}, model={model}")
         rag_chunks = retrieve(req.message)
         system_prompt = build_system_prompt(req.mode, req.topic, req.phase, rag_chunks)
 
@@ -88,6 +99,7 @@ async def api_chat(req: ChatRequest):
         messages.append({"role": "user", "content": req.message})
 
         reply = await chat(system_prompt, messages)
+        logger.info(f"LLM reply received ({len(reply)} chars)")
         detected_phase = _detect_phase(reply, req.phase)
 
         return ChatResponse(reply=reply, phase=detected_phase)
