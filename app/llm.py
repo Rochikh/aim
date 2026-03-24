@@ -5,11 +5,16 @@ import os
 
 from openai import AsyncOpenAI
 
-_api_key = os.environ.get("OPENROUTER_API_KEY", "")
-_base_url = os.environ.get("LLM_BASE_URL", "")
-_model = os.environ.get("LLM_MODEL", "mistralai/mistral-7b-instruct")
+_client: AsyncOpenAI | None = None
 
-_client = AsyncOpenAI(api_key=_api_key, base_url=_base_url)
+
+def _get_client() -> AsyncOpenAI:
+    global _client
+    if _client is None:
+        api_key = os.environ.get("OPENROUTER_API_KEY", "")
+        base_url = os.environ.get("LLM_BASE_URL", "") or None
+        _client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+    return _client
 
 # ---------------------------------------------------------------------------
 # System prompts (verbatim from spec)
@@ -93,10 +98,12 @@ def build_system_prompt(mode: str, topic: str, phase: int, rag_chunks: list[str]
 
 async def chat(system_prompt: str, messages: list[dict]) -> str:
     """Send chat completion request and return assistant message."""
+    client = _get_client()
+    model = os.environ.get("LLM_MODEL", "mistralai/mistral-7b-instruct")
     api_messages = [{"role": "system", "content": system_prompt}] + messages
 
-    response = await _client.chat.completions.create(
-        model=_model,
+    response = await client.chat.completions.create(
+        model=model,
         messages=api_messages,
     )
     return response.choices[0].message.content
