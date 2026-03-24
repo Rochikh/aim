@@ -3,13 +3,14 @@
 import re
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import List
 
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from app.rag import load_corpus, retrieve
+from app.rag import load_corpus, retrieve, add_documents, list_documents, delete_document
 from app.llm import build_system_prompt, chat, analyze_session
 
 
@@ -24,6 +25,8 @@ app = FastAPI(title="AIM Learning Companion", lifespan=lifespan)
 
 STATIC_DIR = Path(__file__).parent.parent / "static"
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+ALLOWED_EXTENSIONS = {".txt", ".pdf", ".pptx", ".ppt", ".zip"}
 
 
 class ChatRequest(BaseModel):
@@ -82,6 +85,39 @@ async def api_chat(req: ChatRequest):
     detected_phase = _detect_phase(reply, req.phase)
 
     return ChatResponse(reply=reply, phase=detected_phase)
+
+
+@app.post("/api/upload")
+async def api_upload(files: List[UploadFile] = File(...)):
+    """Upload one or more files (PDF, PPTX, TXT, ZIP) to the RAG corpus."""
+    file_data = []
+    skipped = []
+
+    for f in files:
+        ext = Path(f.filename).suffix.lower() if f.filename else ""
+        if ext not in ALLOWED_EXTENSIONS:
+            skipped.append({"filename": f.filename, "reason": f"Type non supporte: {ext}"})
+            continue
+        content = await f.read()
+        file_data.append((f.filename, content))
+
+    results = add_documents(file_data) if file_data else []
+    return {"results": results, "skipped": skipped}
+
+
+@app.get("/api/documents")
+async def api_documents():
+    """List all documents in the corpus."""
+    return {"documents": list_documents()}
+
+
+@app.delete("/api/documents/{filename}")
+async def api_delete_document(filename: str):
+    """Delete a document from the corpus."""
+    ok = delete_document(filename)
+    if ok:
+        return {"status": "ok"}
+    return {"status": "error", "message": "Fichier non trouve"}
 
 
 @app.post("/api/analyze", response_model=AnalysisResponse)
