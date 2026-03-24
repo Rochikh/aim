@@ -6,9 +6,8 @@ services:
     volumes:
       - ./corpus:/app/corpus
       - chroma-data:/app/chroma_data
-    environment:
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      - LLM_MODEL=${LLM_MODEL:-mistralai/mistral-7b-instruct}
+    env_file:
+      - .env
     restart: unless-stopped
 
 volumes:

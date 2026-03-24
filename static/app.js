@@ -1,93 +1,115 @@
 /**
- * AIM Learning Companion - Frontend Application
+ * AIM Learning Companion - Frontend
+ * Stateless: no localStorage, no cookies, no persistence.
  */
 
-const state = {
-    mode: "TUTOR",
-    topic: "",
-    phase: 0,
-    history: [],       // {role, content}
-    timestamps: [],    // timestamps for each message
-    sending: false,
-};
+(function () {
+    "use strict";
 
-// DOM elements
-const $ = (sel) => document.querySelector(sel);
-const setupScreen = $("#setup-screen");
-const chatScreen = $("#chat-screen");
-const analysisScreen = $("#analysis-screen");
-const topicInput = $("#topic-input");
-const startBtn = $("#start-btn");
-const chatMessages = $("#chat-messages");
-const chatInput = $("#chat-input");
-const sendBtn = $("#send-btn");
-const endSessionBtn = $("#end-session-btn");
-const resetBtn = $("#reset-btn");
-const exportBtn = $("#export-btn");
-const newSessionBtn = $("#new-session-btn");
+    /* ===== State (in-memory only, lost on tab close) ===== */
+    var state = {
+        mode: "TUTOR",
+        topic: "",
+        phase: 0,
+        history: [],      // {role, content}
+        timestamps: [],   // epoch ms for every message (user & assistant alternating)
+        analysisResult: null
+    };
 
-// Setup: mode selection
-document.querySelectorAll(".mode-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-        document.querySelectorAll(".mode-btn").forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        state.mode = btn.dataset.mode;
-    });
-});
+    var PHASE_NAMES = [
+        "Ciblage",
+        "Clarification",
+        "Mecanisme",
+        "Verification",
+        "Stress-test"
+    ];
 
-// Setup: enable start when topic is entered
-topicInput.addEventListener("input", () => {
-    startBtn.disabled = !topicInput.value.trim();
-});
+    /* ===== DOM refs ===== */
+    var setupScreen   = document.getElementById("setup-screen");
+    var chatScreen    = document.getElementById("chat-screen");
+    var analysisScreen = document.getElementById("analysis-screen");
 
-// Start session
-startBtn.addEventListener("click", () => {
-    state.topic = topicInput.value.trim();
-    if (!state.topic) return;
-    state.phase = 0;
-    state.history = [];
-    state.timestamps = [];
-    $("#header-mode").textContent = state.mode;
-    $("#header-topic").textContent = state.topic;
-    showScreen("chat");
-    updatePhaseIndicator();
-    addSystemMessage(`Session démarrée — Mode: ${state.mode} — Sujet: ${state.topic}`);
-    // Send initial message to get companion's opening question
-    sendMessage(`Je souhaite explorer le sujet suivant : ${state.topic}`);
-});
+    var topicInput  = document.getElementById("topic-input");
+    var btnStart    = document.getElementById("btn-start");
+    var modeBtns    = document.querySelectorAll(".mode-btn");
 
-// Send message
-sendBtn.addEventListener("click", () => sendUserMessage());
-chatInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        sendUserMessage();
+    var modeBadge   = document.getElementById("mode-badge");
+    var topicBadge  = document.getElementById("topic-badge");
+    var phaseDots   = document.getElementById("phase-dots");
+    var phaseLabels = document.getElementById("phase-labels");
+    var messagesEl  = document.getElementById("messages");
+    var typingEl    = document.getElementById("typing");
+    var chatInput   = document.getElementById("chat-input");
+    var btnSend     = document.getElementById("btn-send");
+    var btnEnd      = document.getElementById("btn-end-session");
+    var btnReset    = document.getElementById("btn-reset");
+
+    var scoresGrid  = document.getElementById("scores-grid");
+    var summaryEl   = document.getElementById("analysis-summary");
+    var strengthsEl = document.getElementById("analysis-strengths");
+    var weaknessesEl = document.getElementById("analysis-weaknesses");
+    var rhythmCount = document.getElementById("rhythm-count");
+    var btnExport   = document.getElementById("btn-export");
+    var btnNewSession = document.getElementById("btn-new-session");
+
+    /* ===== Screen navigation ===== */
+    function showScreen(screen) {
+        setupScreen.classList.remove("active");
+        chatScreen.classList.remove("active");
+        analysisScreen.classList.remove("active");
+        screen.classList.add("active");
     }
-});
 
-function sendUserMessage() {
-    const text = chatInput.value.trim();
-    if (!text || state.sending) return;
-    chatInput.value = "";
-    addMessage("user", text);
-    state.timestamps.push(Date.now() / 1000);
-    sendMessage(text);
-}
+    /* ===== Phase indicator ===== */
+    function renderPhaseIndicator() {
+        phaseDots.innerHTML = "";
+        phaseLabels.innerHTML = "";
 
-async function sendMessage(text) {
-    state.sending = true;
-    sendBtn.disabled = true;
-    chatInput.disabled = true;
+        for (var i = 0; i < 5; i++) {
+            if (i > 0) {
+                var conn = document.createElement("div");
+                conn.className = "phase-connector" + (i <= state.phase ? " done" : "");
+                phaseDots.appendChild(conn);
+            }
+            var dot = document.createElement("div");
+            dot.className = "phase-dot";
+            if (i === state.phase) dot.className += " active";
+            else if (i < state.phase) dot.className += " done";
+            dot.textContent = i;
+            phaseDots.appendChild(dot);
 
-    // Show typing indicator
-    const typing = document.createElement("div");
-    typing.className = "typing-indicator";
-    typing.textContent = "Companion réfléchit...";
-    chatMessages.appendChild(typing);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+            var lbl = document.createElement("div");
+            lbl.className = "phase-label-text" + (i === state.phase ? " active" : "");
+            lbl.textContent = PHASE_NAMES[i];
+            phaseLabels.appendChild(lbl);
+        }
+    }
 
-    try {
-        const resp = await fetch("/api/chat", {
+    /* ===== Messages ===== */
+    function addMessage(role, content) {
+        var div = document.createElement("div");
+        div.className = "message " + role;
+        div.textContent = content;
+        messagesEl.insertBefore(div, typingEl);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function setTyping(on) {
+        typingEl.style.display = on ? "block" : "none";
+        if (on) messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    /* ===== API calls ===== */
+    function sendMessage(text) {
+        state.history.push({ role: "user", content: text });
+        state.timestamps.push(Date.now());
+        addMessage("user", text);
+
+        chatInput.value = "";
+        btnSend.disabled = true;
+        setTyping(true);
+
+        fetch("/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -95,184 +117,196 @@ async function sendMessage(text) {
                 mode: state.mode,
                 topic: state.topic,
                 phase: state.phase,
-                history: state.history,
-                timestamp: Date.now() / 1000,
-            }),
+                history: state.history.slice(0, -1) // send history before this message
+            })
+        })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+            setTyping(false);
+            state.phase = data.phase;
+            state.history.push({ role: "assistant", content: data.reply });
+            state.timestamps.push(Date.now());
+            addMessage("assistant", data.reply);
+            renderPhaseIndicator();
+            btnSend.disabled = false;
+            chatInput.focus();
+        })
+        .catch(function (err) {
+            setTyping(false);
+            addMessage("assistant", "Erreur de connexion. Veuillez reessayer.");
+            btnSend.disabled = false;
         });
-
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const data = await resp.json();
-
-        // Remove typing indicator
-        typing.remove();
-
-        // Update phase
-        state.phase = data.phase;
-        updatePhaseIndicator();
-
-        // Add to history and display
-        state.history.push({ role: "user", content: text });
-        state.history.push({ role: "assistant", content: data.reply });
-        state.timestamps.push(Date.now() / 1000);
-
-        addMessage("assistant", data.reply);
-    } catch (err) {
-        typing.remove();
-        addSystemMessage(`Erreur de connexion: ${err.message}. Vérifiez qu'Ollama est en cours d'exécution.`);
-    } finally {
-        state.sending = false;
-        sendBtn.disabled = false;
-        chatInput.disabled = false;
-        chatInput.focus();
     }
-}
 
-function addMessage(role, content) {
-    const div = document.createElement("div");
-    div.className = `message ${role}`;
-    div.textContent = content;
-    chatMessages.appendChild(div);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-}
+    function requestAnalysis() {
+        btnEnd.disabled = true;
+        setTyping(true);
 
-function addSystemMessage(text) {
-    const div = document.createElement("div");
-    div.className = "message system";
-    div.textContent = text;
-    chatMessages.appendChild(div);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-function updatePhaseIndicator() {
-    document.querySelectorAll(".phase-step").forEach((step) => {
-        const p = parseInt(step.dataset.phase);
-        step.classList.remove("active", "done");
-        if (p === state.phase) step.classList.add("active");
-        else if (p < state.phase) step.classList.add("done");
-    });
-}
-
-function showScreen(name) {
-    [setupScreen, chatScreen, analysisScreen].forEach((s) => s.classList.remove("active"));
-    if (name === "setup") setupScreen.classList.add("active");
-    else if (name === "chat") chatScreen.classList.add("active");
-    else if (name === "analysis") analysisScreen.classList.add("active");
-}
-
-// End session
-endSessionBtn.addEventListener("click", async () => {
-    if (state.history.length === 0) {
-        addSystemMessage("Aucun message dans la session.");
-        return;
-    }
-    showScreen("analysis");
-    $("#analysis-loading").classList.remove("hidden");
-    $("#analysis-content").classList.add("hidden");
-
-    try {
-        const resp = await fetch("/api/analyze", {
+        fetch("/api/analyze", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 history: state.history,
-                timestamps: state.timestamps,
-            }),
+                timestamps: state.timestamps
+            })
+        })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+            setTyping(false);
+            state.analysisResult = data;
+            renderAnalysis(data);
+            showScreen(analysisScreen);
+        })
+        .catch(function () {
+            setTyping(false);
+            btnEnd.disabled = false;
+            alert("Erreur lors de l'analyse. Veuillez reessayer.");
+        });
+    }
+
+    /* ===== Analysis rendering ===== */
+    function renderAnalysis(data) {
+        var scores = [
+            { key: "reasoningScore", label: "Raisonnement" },
+            { key: "clarityScore", label: "Clarte" },
+            { key: "skepticismScore", label: "Scepticisme" },
+            { key: "processScore", label: "Processus" },
+            { key: "reflectionScore", label: "Reflexion" },
+            { key: "integrityScore", label: "Integrite" }
+        ];
+
+        scoresGrid.innerHTML = "";
+        scores.forEach(function (s) {
+            var val = data[s.key] || 0;
+            var card = document.createElement("div");
+            card.className = "score-card";
+            card.innerHTML =
+                '<div class="score-value">' + val + '</div>' +
+                '<div class="score-label">' + s.label + '</div>' +
+                '<div class="score-bar"><div class="score-bar-fill" style="width:' + val + '%"></div></div>';
+            scoresGrid.appendChild(card);
         });
 
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const data = await resp.json();
-        displayAnalysis(data);
-    } catch (err) {
-        $("#analysis-loading").textContent = `Erreur: ${err.message}`;
+        summaryEl.textContent = data.summary || "Aucun bilan disponible.";
+
+        strengthsEl.innerHTML = "";
+        (data.keyStrengths || []).forEach(function (s) {
+            var li = document.createElement("li");
+            li.textContent = s;
+            strengthsEl.appendChild(li);
+        });
+
+        weaknessesEl.innerHTML = "";
+        (data.weaknesses || []).forEach(function (w) {
+            var li = document.createElement("li");
+            li.textContent = w;
+            weaknessesEl.appendChild(li);
+        });
+
+        rhythmCount.textContent = data.rhythmBreakCount || 0;
     }
-});
 
-function displayAnalysis(data) {
-    $("#analysis-loading").classList.add("hidden");
-    $("#analysis-content").classList.remove("hidden");
+    /* ===== JSON export ===== */
+    function exportJSON() {
+        var payload = {
+            mode: state.mode,
+            topic: state.topic,
+            messages: state.history,
+            timestamps: state.timestamps,
+            scores: state.analysisResult
+        };
+        var blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = "aim-session-" + new Date().toISOString().slice(0, 10) + ".json";
+        a.click();
+        URL.revokeObjectURL(url);
+    }
 
-    const scores = [
-        { key: "reasoningScore", label: "Raisonnement", color: "#6c5ce7" },
-        { key: "clarityScore", label: "Clarté", color: "#00cec9" },
-        { key: "skepticismScore", label: "Scepticisme", color: "#e17055" },
-        { key: "processScore", label: "Processus", color: "#00b894" },
-        { key: "reflectionScore", label: "Réflexion", color: "#fdcb6e" },
-        { key: "integrityScore", label: "Intégrité", color: "#a29bfe" },
-    ];
+    /* ===== Reset ===== */
+    function resetSession() {
+        state.mode = "TUTOR";
+        state.topic = "";
+        state.phase = 0;
+        state.history = [];
+        state.timestamps = [];
+        state.analysisResult = null;
 
-    const grid = $("#scores-grid");
-    grid.innerHTML = "";
-    scores.forEach(({ key, label, color }) => {
-        const val = data[key] || 0;
-        const card = document.createElement("div");
-        card.className = "score-card";
-        card.innerHTML = `
-            <div class="score-value" style="color: ${color}">${val}</div>
-            <div class="score-label">${label}</div>
-            <div class="score-bar">
-                <div class="score-bar-fill" style="width: ${val}%; background: ${color}"></div>
-            </div>
-        `;
-        grid.appendChild(card);
+        topicInput.value = "";
+        chatInput.value = "";
+        messagesEl.querySelectorAll(".message").forEach(function (el) { el.remove(); });
+
+        modeBtns.forEach(function (btn) {
+            btn.classList.toggle("selected", btn.dataset.mode === "TUTOR");
+        });
+
+        btnStart.disabled = true;
+        btnEnd.disabled = false;
+        btnSend.disabled = false;
+
+        showScreen(setupScreen);
+    }
+
+    /* ===== Event listeners ===== */
+
+    // Mode selection
+    modeBtns.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            modeBtns.forEach(function (b) { b.classList.remove("selected"); });
+            btn.classList.add("selected");
+            state.mode = btn.dataset.mode;
+        });
     });
 
-    $("#analysis-summary").textContent = data.summary || "Aucune analyse disponible.";
-
-    const strengthsList = $("#analysis-strengths");
-    strengthsList.innerHTML = "";
-    (data.keyStrengths || []).forEach((s) => {
-        const li = document.createElement("li");
-        li.textContent = s;
-        strengthsList.appendChild(li);
+    // Topic input enables start button
+    topicInput.addEventListener("input", function () {
+        btnStart.disabled = !topicInput.value.trim();
     });
 
-    const weaknessesList = $("#analysis-weaknesses");
-    weaknessesList.innerHTML = "";
-    (data.weaknesses || []).forEach((w) => {
-        const li = document.createElement("li");
-        li.textContent = w;
-        weaknessesList.appendChild(li);
+    // Start session
+    btnStart.addEventListener("click", function () {
+        var topic = topicInput.value.trim();
+        if (!topic) return;
+
+        state.topic = topic;
+        modeBadge.textContent = state.mode === "TUTOR" ? "Tuteur" : "Critique";
+        topicBadge.textContent = topic;
+
+        renderPhaseIndicator();
+        showScreen(chatScreen);
+        chatInput.focus();
     });
 
-    $("#analysis-rhythm").textContent =
-        `Nombre de réponses avec un rythme anormalement rapide (< 8s) : ${data.rhythmBreakCount || 0}`;
-}
+    // Send message
+    btnSend.addEventListener("click", function () {
+        var text = chatInput.value.trim();
+        if (text) sendMessage(text);
+    });
 
-// Export JSON
-exportBtn.addEventListener("click", () => {
-    const exportData = {
-        topic: state.topic,
-        mode: state.mode,
-        history: state.history,
-        timestamps: state.timestamps,
-        exportedAt: new Date().toISOString(),
-    };
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `aim-session-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-});
+    chatInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+            var text = chatInput.value.trim();
+            if (text) sendMessage(text);
+        }
+    });
 
-// Reset / New session
-resetBtn.addEventListener("click", () => {
-    if (!confirm("Réinitialiser la session ? Toutes les données seront perdues.")) return;
-    resetState();
-    showScreen("setup");
-});
+    // End session -> analysis
+    btnEnd.addEventListener("click", function () {
+        if (state.history.length === 0) {
+            alert("Aucun echange a analyser.");
+            return;
+        }
+        requestAnalysis();
+    });
 
-newSessionBtn.addEventListener("click", () => {
-    resetState();
-    showScreen("setup");
-});
+    // Reset
+    btnReset.addEventListener("click", resetSession);
 
-function resetState() {
-    state.phase = 0;
-    state.history = [];
-    state.timestamps = [];
-    chatMessages.innerHTML = "";
-    topicInput.value = "";
-    startBtn.disabled = true;
-}
+    // Export JSON
+    btnExport.addEventListener("click", exportJSON);
+
+    // New session from analysis screen
+    btnNewSession.addEventListener("click", resetSession);
+
+})();

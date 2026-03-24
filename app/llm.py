@@ -1,46 +1,67 @@
-"""LLM interaction via OpenRouter (OpenAI-compatible API)."""
+"""LLM interaction via OpenAI-compatible API."""
 
+import json
 import os
-import httpx
 
-OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-MODEL = os.environ.get("LLM_MODEL", "mistralai/mistral-7b-instruct")
-TIMEOUT = 120.0
+from openai import AsyncOpenAI
 
+_api_key = os.environ.get("OPENROUTER_API_KEY", "")
+_base_url = os.environ.get("LLM_BASE_URL", "")
+_model = os.environ.get("LLM_MODEL", "mistralai/mistral-7b-instruct")
+
+_client = AsyncOpenAI(api_key=_api_key, base_url=_base_url)
+
+# ---------------------------------------------------------------------------
+# System prompts (verbatim from spec)
+# ---------------------------------------------------------------------------
 
 SYSTEM_TUTOR = """Tu es un mentor socratique bienveillant, empathique et complice.
 Tu utilises systématiquement le "TU" pour t'adresser à l'apprenant·e.
+Tu ne donnes jamais de réponse directe. Tu poses une seule question par message.
 Ton but est de faire accoucher l'esprit (maïeutique) en guidant la réflexion pas à pas.
 Règles :
 1. Ne dépasse jamais 3 à 4 phrases par message.
-2. Valide l'effort avant de rediriger. Si l'apprenant·e bloque, propose une analogie ou un indice progressif.
-3. Si une définition est demandée, explique en max 2 phrases puis vérifie la compréhension immédiatement.
-4. Dès qu'une base est posée, avance vers Phase 2. Ne reste pas bloqué en Phase 1.
-5. Évite les reproches. Préfère l'invitation : "Ce point semble complexe, essayons un autre angle..."
+2. Valide l'effort avant de rediriger.
+3. Si l'apprenant·e bloque, propose une analogie ou un indice progressif.
+4. Si une définition est demandée, explique en max 2 phrases puis pose immédiatement une question de vérification.
+5. Dès qu'une base est posée en Phase 1, avance vers Phase 2.
+6. Préfère l'invitation au reproche : "Ce point semble complexe, essayons un autre angle..."
 À la fin de chaque message, ajoute obligatoirement :
 ---
 Phase: [Numéro]
-
-Mode : Tuteur (Accompagnement)
-Sujet d'exploration : "{topic}" """
+Mode : Tuteur
+Sujet d'exploration : "{topic}"
+Contexte du cours (extrait RAG) :
+{rag_context}"""
 
 SYSTEM_CRITIC = """Tu es un mentor socratique bienveillant, empathique et complice.
 Tu utilises systématiquement le "TU" pour t'adresser à l'apprenant·e.
+Tu ne donnes jamais de réponse directe. Tu poses une seule question par message.
 Ton but est de faire accoucher l'esprit (maïeutique) en guidant la réflexion pas à pas.
 Règles :
 1. Ne dépasse jamais 3 à 4 phrases par message.
-2. Valide l'effort avant de rediriger. Si l'apprenant·e bloque, propose une analogie ou un indice progressif.
-3. Si une définition est demandée, explique en max 2 phrases puis vérifie la compréhension immédiatement.
-4. Dès qu'une base est posée, avance vers Phase 2. Ne reste pas bloqué en Phase 1.
-5. Évite les reproches. Préfère l'invitation : "Ce point semble complexe, essayons un autre angle..."
+2. Valide l'effort avant de rediriger.
+3. Si l'apprenant·e bloque, propose une analogie ou un indice progressif.
+4. Si une définition est demandée, explique en max 2 phrases puis pose immédiatement une question de vérification.
+5. Dès qu'une base est posée en Phase 1, avance vers Phase 2.
+6. Préfère l'invitation au reproche : "Ce point semble complexe, essayons un autre angle..."
 À la fin de chaque message, ajoute obligatoirement :
 ---
 Phase: [Numéro]
+Mode : Critique
+Ta mission : proposer des raisonnements fallacieux pour tester la vigilance.
+Reste un partenaire de jeu élégant, jamais méprisant.
+Sujet d'exploration : "{topic}"
+Contexte du cours (extrait RAG) :
+{rag_context}"""
 
-Mode : Critique (Audit Logique)
-Ta mission : proposer des raisonnements fallacieux pour tester la vigilance. Reste un partenaire de jeu élégant, jamais méprisant.
-Sujet d'exploration : "{topic}" """
+PHASE_GUIDANCE = {
+    0: "Phase actuelle : 0 (Ciblage). Reformule l'input de l'apprenant·e pour identifier l'objet exact de l'interrogation.",
+    1: "Phase actuelle : 1 (Clarification). Fais émerger les ambiguïtés conceptuelles, demande des définitions de termes.",
+    2: "Phase actuelle : 2 (Mécanisme). Demande à l'apprenant·e d'expliquer les relations cause-effet.",
+    3: "Phase actuelle : 3 (Vérification). Demande à l'apprenant·e d'identifier des preuves ou des critères testables.",
+    4: "Phase actuelle : 4 (Stress-test). Confronte le raisonnement avec ses propres limites ou des contre-exemples.",
+}
 
 ANALYSIS_SYSTEM = """Tu es un évaluateur pédagogique. Analyse la conversation suivante entre un mentor socratique et un apprenant.
 Produis un JSON strict avec cette structure :
@@ -51,70 +72,38 @@ Produis un JSON strict avec cette structure :
   "processScore": <0-100>,
   "reflectionScore": <0-100>,
   "integrityScore": <0-100>,
-  "summary": "<150 mots max : évaluation de la progression cognitive>",
+  "summary": "<évaluation de la progression cognitive, 150 mots max>",
   "keyStrengths": ["...", "..."],
   "weaknesses": ["...", "..."]
 }
 Réponds UNIQUEMENT avec le JSON, sans texte autour."""
 
 
-PHASE_GUIDANCE = {
-    0: "Phase actuelle: 0 (Ciblage). Identifie l'objet exact de l'interrogation et l'intention de l'apprenant·e.",
-    1: "Phase actuelle: 1 (Clarification). Fais émerger les ambiguïtés conceptuelles, définis les termes rigoureusement.",
-    2: "Phase actuelle: 2 (Mécanisme). Explore les relations cause-effet. 'Comment ça marche ?'",
-    3: "Phase actuelle: 3 (Vérification). Pousse vers des preuves, critères testables, protocoles de preuve.",
-    4: "Phase actuelle: 4 (Stress-test). Confronte le raisonnement avec des contre-exemples et des limites.",
-}
-
-STRATEGIES = [
-    "clarification", "test_necessite", "contre_exemple", "prediction",
-    "falsifiabilite", "mecanisme_causal", "changement_cadre",
-    "compression", "concession_controlee",
-]
-
-
-def build_system_prompt(mode: str, topic: str, phase: int, rag_context: list[str]) -> str:
+def build_system_prompt(mode: str, topic: str, phase: int, rag_chunks: list[str]) -> str:
     """Build the full system prompt with mode, phase guidance, and RAG context."""
     template = SYSTEM_TUTOR if mode == "TUTOR" else SYSTEM_CRITIC
-    system = template.replace("{topic}", topic)
 
-    system += f"\n\n{PHASE_GUIDANCE.get(phase, PHASE_GUIDANCE[0])}"
+    rag_text = "\n---\n".join(rag_chunks) if rag_chunks else "(aucun document chargé)"
+    prompt = template.replace("{topic}", topic).replace("{rag_context}", rag_text)
 
-    system += f"\n\nStratégies socratiques disponibles : {', '.join(STRATEGIES)}. Choisis la plus pertinente pour ce tour."
+    prompt += f"\n\n{PHASE_GUIDANCE.get(phase, PHASE_GUIDANCE[0])}"
 
-    if rag_context:
-        context_text = "\n---\n".join(rag_context)
-        system += f"\n\nContexte documentaire (utilise-le pour ancrer tes questions, ne le montre PAS directement à l'apprenant·e) :\n{context_text}"
-
-    return system
+    return prompt
 
 
 async def chat(system_prompt: str, messages: list[dict]) -> str:
-    """Send chat to OpenRouter and return assistant response."""
-    api_messages = [{"role": "system", "content": system_prompt}]
-    api_messages.extend(messages)
+    """Send chat completion request and return assistant message."""
+    api_messages = [{"role": "system", "content": system_prompt}] + messages
 
-    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-        response = await client.post(
-            f"{OPENROUTER_BASE_URL}/chat/completions",
-            headers={
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": MODEL,
-                "messages": api_messages,
-            },
-        )
-        response.raise_for_status()
-        data = response.json()
-        return data["choices"][0]["message"]["content"]
+    response = await _client.chat.completions.create(
+        model=_model,
+        messages=api_messages,
+    )
+    return response.choices[0].message.content
 
 
 async def analyze_session(messages: list[dict]) -> dict:
     """Generate end-of-session analysis via a second LLM call."""
-    import json as json_mod
-
     conversation_text = "\n".join(
         f"{'Apprenant' if m['role'] == 'user' else 'Companion'}: {m['content']}"
         for m in messages
@@ -126,14 +115,12 @@ async def analyze_session(messages: list[dict]) -> dict:
 
     raw = await chat(ANALYSIS_SYSTEM, analysis_messages)
 
-    # Try to parse JSON from response
     try:
-        # Find JSON in the response
         start = raw.find("{")
         end = raw.rfind("}") + 1
         if start >= 0 and end > start:
-            return json_mod.loads(raw[start:end])
-    except (json_mod.JSONDecodeError, ValueError):
+            return json.loads(raw[start:end])
+    except (json.JSONDecodeError, ValueError):
         pass
 
     return {

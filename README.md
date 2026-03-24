@@ -1,53 +1,114 @@
-# AIM Learning Companion
+---
+title: AIM Learning Companion
+emoji: 🎯
+colorFrom: blue
+colorTo: purple
+sdk: docker
+app_port: 7860
+pinned: false
+---
 
-A Socratic AI companion for adult learners in professional training contexts. Uses a strict 5-phase Socratic protocol to guide learners through critical thinking, grounded in course materials via RAG.
+# AIM - Compagnon socratique d'apprentissage
+
+Moteur de questionnement socratique pour apprenants adultes en formation professionnelle. Applique un protocole strict en 5 phases pour guider la reflexion critique, ancre dans les documents de cours via RAG.
 
 ## Architecture
 
-- **Backend**: FastAPI (Python)
-- **LLM**: Ollama with `mistral:instruct` (local, no external API calls)
-- **Vector Store**: ChromaDB (local)
-- **Embeddings**: sentence-transformers (`all-MiniLM-L6-v2`, local)
-- **Frontend**: Vanilla HTML/CSS/JS
+- **Backend** : FastAPI (Python)
+- **LLM** : OpenRouter ou Ollama (configurable via `.env`)
+- **Vector Store** : ChromaDB (local, persistant)
+- **Embeddings** : sentence-transformers (`all-MiniLM-L6-v2`)
+- **Frontend** : Vanilla HTML/CSS/JS (servi par FastAPI)
 
-## Prerequisites
+## Demarrage rapide
 
-1. **Install Ollama**: https://ollama.ai
-2. **Pull the model**:
+1. Copier le fichier d'environnement :
    ```bash
-   ollama pull mistral:instruct
-   ```
-3. **Ensure Ollama is running**:
-   ```bash
-   ollama serve
+   cp .env.example .env
    ```
 
-## Quick Start
+2. Configurer la cle API dans `.env` (voir section "Configuration LLM" ci-dessous)
 
-```bash
-docker-compose up --build
+3. Lancer :
+   ```bash
+   docker-compose up --build
+   ```
+
+4. Ouvrir http://localhost:8000
+
+## Configuration LLM
+
+### Option A : Test (OpenRouter)
+
+```env
+OPENROUTER_API_KEY=sk-or-v1-votre-cle-ici
+LLM_BASE_URL=https://openrouter.ai/api/v1
+LLM_MODEL=mistralai/mistral-7b-instruct
 ```
 
-Open http://localhost:8000 in your browser.
+### Option B : Production (Ollama local)
+
+```env
+OPENROUTER_API_KEY=ollama
+LLM_BASE_URL=http://localhost:11434/v1
+LLM_MODEL=mistral:instruct
+```
+
+Prerequis pour Ollama :
+```bash
+ollama pull mistral:instruct
+ollama serve
+```
+
+## Deploiement en ligne (Hugging Face Spaces)
+
+Pour une demo accessible via URL publique, gratuite, sans carte bancaire :
+
+1. Creer un compte sur [huggingface.co](https://huggingface.co)
+2. **New Space** > choisir **Docker** comme SDK
+3. Connecter le repo GitHub ou pousser le code directement
+4. Dans **Settings > Variables and secrets**, ajouter comme **secrets** :
+   - `OPENROUTER_API_KEY` = votre cle OpenRouter
+   - `LLM_BASE_URL` = `https://openrouter.ai/api/v1`
+   - `LLM_MODEL` = `mistralai/mistral-7b-instruct`
+5. Le Space se build et deploie automatiquement
+6. URL publique : `https://votre-nom-aim.hf.space`
+
+Free tier : 2 Go RAM, 16 Go disque — suffisant pour sentence-transformers + ChromaDB.
+
+## Migration vers deploiement local
+
+L'application est concue pour rendre la migration triviale :
+
+1. **LLM** : Changer uniquement `LLM_BASE_URL` et `LLM_MODEL` dans `.env`
+   - Remplacer `https://openrouter.ai/api/v1` par `http://localhost:11434/v1`
+   - Remplacer `mistralai/mistral-7b-instruct` par `mistral:instruct`
+   - Mettre `OPENROUTER_API_KEY=ollama` (Ollama n'exige pas de cle mais le champ doit etre non-vide)
+
+2. **Aucune modification de code requise** : le `base_url` et l'`api_key` sont charges exclusivement depuis `.env`
+
+3. **Resultat** : inference 100% locale, aucune donnee ne quitte le reseau client
 
 ## Corpus
 
-Place `.pdf` and `.txt` files in the `/corpus` directory. The RAG pipeline will load and index them on startup. A sample file is included for testing.
+Placer des fichiers `.pdf` et `.txt` dans le dossier `/corpus`. Le pipeline RAG les charge et les indexe au demarrage.
 
-The `/corpus` directory is volume-mounted — you can add or swap documents without rebuilding the container.
+Le dossier `/corpus` est monte en volume — ajout ou remplacement de documents sans reconstruction du conteneur.
 
-## Features
+Un fichier `sample.txt` est inclus pour tester le RAG immediatement.
 
-- **Two modes**: TUTOR (guided learning) and CRITIC (logical audit)
-- **5-phase Socratic protocol**: Ciblage → Clarification → Mécanisme → Vérification → Stress-test
-- **RAG-grounded questioning**: Questions are informed by course materials
-- **Session analysis**: End-of-session cognitive assessment with 6 scored dimensions
-- **JSON export**: Download full session data
-- **Privacy**: All processing is local — no external API calls, no data retention
+## Fonctionnalites
 
-## Privacy
+- **Deux modes** : TUTEUR (accompagnement) et CRITIQUE (audit logique)
+- **Protocole socratique en 5 phases** : Ciblage → Clarification → Mecanisme → Verification → Stress-test
+- **Une seule question par reponse** — jamais de reponse directe
+- **RAG** : questions ancrees dans les documents de cours
+- **Analyse de fin de session** : 6 dimensions notees (0-100) + bilan + export JSON
+- **Stateless** : aucune donnee persistee apres fermeture de l'onglet
 
-- No external API calls during inference
-- All processing in-memory or local filesystem
-- No retention of learner inputs after session ends
-- No login, no authentication
+## Confidentialite
+
+- Sessions sans etat : aucune donnee persistee apres fermeture de l'onglet
+- Pas de localStorage pour l'historique
+- Pas de comptes utilisateurs, pas d'authentification
+- Pas de cookies, pas de tracking

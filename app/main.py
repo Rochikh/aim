@@ -1,12 +1,11 @@
 """FastAPI application for AIM Learning Companion."""
 
-import json
-import time
+import re
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -33,7 +32,6 @@ class ChatRequest(BaseModel):
     topic: str = ""
     phase: int = 0
     history: list[dict] = []
-    timestamp: float = 0.0
 
 
 class ChatResponse(BaseModel):
@@ -59,14 +57,13 @@ class AnalysisResponse(BaseModel):
     rhythmBreakCount: int = 0
 
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/")
 async def index():
     return FileResponse(str(STATIC_DIR / "index.html"))
 
 
 def _detect_phase(reply: str, current_phase: int) -> int:
     """Extract phase number from the companion's reply."""
-    import re
     match = re.search(r"Phase:\s*(\d)", reply)
     if match:
         return int(match.group(1))
@@ -75,22 +72,13 @@ def _detect_phase(reply: str, current_phase: int) -> int:
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def api_chat(req: ChatRequest):
-    # Retrieve relevant context from corpus
     rag_chunks = retrieve(req.message)
-
-    # Build system prompt
     system_prompt = build_system_prompt(req.mode, req.topic, req.phase, rag_chunks)
 
-    # Build message history for LLM
-    messages = []
-    for msg in req.history:
-        messages.append({"role": msg["role"], "content": msg["content"]})
+    messages = [{"role": m["role"], "content": m["content"]} for m in req.history]
     messages.append({"role": "user", "content": req.message})
 
-    # Get LLM response
     reply = await chat(system_prompt, messages)
-
-    # Detect phase from reply
     detected_phase = _detect_phase(reply, req.phase)
 
     return ChatResponse(reply=reply, phase=detected_phase)
@@ -98,10 +86,9 @@ async def api_chat(req: ChatRequest):
 
 @app.post("/api/analyze", response_model=AnalysisResponse)
 async def api_analyze(req: AnalysisRequest):
-    # Get LLM analysis
     analysis = await analyze_session(req.history)
 
-    # Count rhythm breaks (responses under 8 seconds)
+    # Count rhythm breaks: user responses submitted in under 8 seconds
     rhythm_breaks = 0
     if len(req.timestamps) >= 2:
         for i in range(1, len(req.timestamps), 2):
