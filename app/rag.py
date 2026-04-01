@@ -225,7 +225,7 @@ def add_documents(files: list[tuple[str, bytes]]) -> list[dict]:
             extracted = _extract_zip(file_bytes)
             if not extracted:
                 results.append({"filename": filename, "status": "error",
-                                "message": "Aucun fichier supporté trouvé dans le ZIP"})
+                                "message": "Aucun fichier supporte trouve dans le ZIP"})
                 continue
             for inner_name, inner_bytes in extracted:
                 results.append(_add_single_file(inner_name, inner_bytes))
