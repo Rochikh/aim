@@ -102,7 +102,7 @@ async def chat(system_prompt: str, messages: list[dict]) -> str:
     logger = logging.getLogger(__name__)
 
     client = _get_client()
-    model = os.environ.get("LLM_MODEL", "mistralai/mistral-small-3.1-24b-instruct:free").strip()
+    model = os.environ.get("LLM_MODEL", "openrouter/free").strip()
     api_messages = [{"role": "system", "content": system_prompt}] + messages
 
     logger.info(f"LLM call: model={model!r}, messages={len(api_messages)}, system_prompt_len={len(system_prompt)}")
