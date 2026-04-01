@@ -39,12 +39,14 @@ class ChatRequest(BaseModel):
     mode: str = "TUTOR"
     topic: str = ""
     phase: int = 0
+    phase_turns: int = 0  # how many turns spent in current phase
     history: list[dict] = []
 
 
 class ChatResponse(BaseModel):
     reply: str
     phase: int
+    phase_turns: int = 0
 
 
 class AnalysisRequest(BaseModel):
@@ -82,12 +84,19 @@ async def download_file(filename: str):
     return FileResponse(str(file_path), filename=filename)
 
 
-def _detect_phase(reply: str, current_phase: int) -> int:
-    """Extract phase number from the companion's reply."""
-    match = re.search(r"Phase:\s*(\d)", reply)
-    if match:
-        return int(match.group(1))
-    return current_phase
+MAX_TURNS_PER_PHASE = 2
+
+
+def _compute_phase(current_phase: int, phase_turns: int) -> tuple[int, int]:
+    """Advance phase based on conversation depth.
+
+    Returns (new_phase, new_phase_turns).
+    Phase advances after MAX_TURNS_PER_PHASE learner turns in the same phase.
+    """
+    new_turns = phase_turns + 1
+    if new_turns >= MAX_TURNS_PER_PHASE and current_phase < 4:
+        return current_phase + 1, 0
+    return current_phase, new_turns
 
 
 @app.post("/api/chat", response_model=ChatResponse)
@@ -103,18 +112,20 @@ async def api_chat(req: ChatRequest):
         logger.warning("LLM_BASE_URL is not set, will use OpenAI default")
 
     try:
-        logger.info(f"Chat request: mode={req.mode}, topic={req.topic[:50]}, phase={req.phase}, model={model}")
+        # Compute phase progression server-side
+        new_phase, new_phase_turns = _compute_phase(req.phase, req.phase_turns)
+        logger.info(f"Chat request: mode={req.mode}, topic={req.topic[:50]}, phase={req.phase}->{new_phase}, turns={req.phase_turns}->{new_phase_turns}, model={model}")
+
         rag_chunks = retrieve(req.message)
-        system_prompt = build_system_prompt(req.mode, req.topic, req.phase, rag_chunks)
+        system_prompt = build_system_prompt(req.mode, req.topic, new_phase, rag_chunks)
 
         messages = [{"role": m["role"], "content": m["content"]} for m in req.history]
         messages.append({"role": "user", "content": req.message})
 
         reply = await chat(system_prompt, messages)
         logger.info(f"LLM reply received ({len(reply)} chars)")
-        detected_phase = _detect_phase(reply, req.phase)
 
-        return ChatResponse(reply=reply, phase=detected_phase)
+        return ChatResponse(reply=reply, phase=new_phase, phase_turns=new_phase_turns)
     except Exception as e:
         logger.error(f"Chat error: {e}\n{traceback.format_exc()}")
         return JSONResponse(status_code=500, content={"error": str(e)})
