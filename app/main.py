@@ -65,9 +65,21 @@ class AnalysisResponse(BaseModel):
     rhythmBreakCount: int = 0
 
 
+CORPUS_DIR = Path(__file__).parent.parent / "corpus"
+
+
 @app.get("/")
 async def index():
     return FileResponse(str(STATIC_DIR / "index.html"))
+
+
+@app.get("/download/{filename}")
+async def download_file(filename: str):
+    """Serve a file from the corpus directory for download."""
+    file_path = CORPUS_DIR / filename
+    if not file_path.exists() or not file_path.is_file():
+        return JSONResponse(status_code=404, content={"error": "Fichier non trouvé"})
+    return FileResponse(str(file_path), filename=filename)
 
 
 def _detect_phase(reply: str, current_phase: int) -> int:
