@@ -95,10 +95,17 @@
     }
 
     /* ===== Messages ===== */
+    function stripPhaseMarker(text) {
+        // Remove "---\nPhase: ..." block from the end of assistant messages
+        var idx = text.indexOf("\n---");
+        if (idx === -1) idx = text.indexOf("---\nPhase");
+        return idx >= 0 ? text.substring(0, idx).trim() : text;
+    }
+
     function addMessage(role, content) {
         var div = document.createElement("div");
         div.className = "message " + role;
-        div.textContent = content;
+        div.textContent = role === "assistant" ? stripPhaseMarker(content) : content;
         messagesEl.insertBefore(div, typingEl);
         messagesEl.scrollTop = messagesEl.scrollHeight;
     }
