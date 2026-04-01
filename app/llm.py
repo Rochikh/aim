@@ -11,8 +11,8 @@ _client: AsyncOpenAI | None = None
 def _get_client() -> AsyncOpenAI:
     global _client
     if _client is None:
-        api_key = os.environ.get("OPENROUTER_API_KEY", "")
-        base_url = os.environ.get("LLM_BASE_URL", "") or None
+        api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+        base_url = os.environ.get("LLM_BASE_URL", "").strip() or None
         _client = AsyncOpenAI(api_key=api_key, base_url=base_url)
     return _client
 
@@ -98,15 +98,23 @@ def build_system_prompt(mode: str, topic: str, phase: int, rag_chunks: list[str]
 
 async def chat(system_prompt: str, messages: list[dict]) -> str:
     """Send chat completion request and return assistant message."""
+    import logging
+    logger = logging.getLogger(__name__)
+
     client = _get_client()
-    model = os.environ.get("LLM_MODEL", "mistralai/mistral-7b-instruct")
+    model = os.environ.get("LLM_MODEL", "mistralai/mistral-small-3.1-24b-instruct:free").strip()
     api_messages = [{"role": "system", "content": system_prompt}] + messages
+
+    logger.info(f"LLM call: model={model!r}, messages={len(api_messages)}, system_prompt_len={len(system_prompt)}")
 
     response = await client.chat.completions.create(
         model=model,
         messages=api_messages,
+        timeout=60,
     )
-    return response.choices[0].message.content
+    reply = response.choices[0].message.content
+    logger.info(f"LLM response: {len(reply)} chars")
+    return reply
 
 
 async def analyze_session(messages: list[dict]) -> dict:
