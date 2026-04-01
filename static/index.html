@@ -1,29 +1,32 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AIM - Compagnon d'apprentissage</title>
+    <title>AIM - Learning Companion</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
+    <!-- Language toggle (visible on all screens) -->
+    <button id="btn-lang" class="btn-lang" title="Switch language">FR</button>
+
     <!-- ===== Setup Screen ===== -->
     <div id="setup-screen" class="screen active">
         <h1>AIM</h1>
-        <p class="subtitle">Compagnon socratique d'apprentissage</p>
+        <p class="subtitle" data-i18n="subtitle">Socratic Learning Companion</p>
 
         <div class="form-group">
-            <label for="topic-input">Sujet d'exploration</label>
-            <input type="text" id="topic-input" placeholder="Ex : L'intelligence artificielle en formation professionnelle">
+            <label for="topic-input" data-i18n="topicLabel">Exploration topic</label>
+            <input type="text" id="topic-input" data-i18n-placeholder="topicPlaceholder" placeholder="E.g.: Artificial intelligence in professional training">
         </div>
 
         <div class="form-group">
-            <label>Documents de reference (optionnel)</label>
+            <label data-i18n="docsLabel">Reference documents (optional)</label>
             <div class="upload-zone" id="upload-zone">
                 <div class="upload-icon">+</div>
-                <div class="upload-text">Glisse tes fichiers ici ou clique pour selectionner</div>
-                <div class="upload-hint">PDF, PPTX, TXT ou ZIP — plusieurs fichiers possibles</div>
+                <div class="upload-text" data-i18n="uploadText">Drag your files here or click to select</div>
+                <div class="upload-hint" data-i18n="uploadHint">PDF, PPTX, TXT or ZIP — multiple files allowed</div>
                 <input type="file" id="file-input" multiple accept=".pdf,.pptx,.ppt,.txt,.zip" hidden>
             </div>
             <div class="upload-list" id="upload-list"></div>
@@ -31,20 +34,20 @@
         </div>
 
         <div class="form-group">
-            <label>Mode</label>
+            <label data-i18n="modeLabel">Mode</label>
             <div class="mode-selector">
                 <div class="mode-btn selected" data-mode="TUTOR">
-                    <div class="mode-title">Tuteur</div>
-                    <div class="mode-desc">Accompagnement bienveillant, questions ouvertes</div>
+                    <div class="mode-title" data-i18n="modeTutor">Tutor</div>
+                    <div class="mode-desc" data-i18n="modeTutorDesc">Supportive guidance, open-ended questions</div>
                 </div>
                 <div class="mode-btn" data-mode="CRITIC">
-                    <div class="mode-title">Critique</div>
-                    <div class="mode-desc">Avocat du diable, teste les failles logiques</div>
+                    <div class="mode-title" data-i18n="modeCritic">Critic</div>
+                    <div class="mode-desc" data-i18n="modeCriticDesc">Devil's advocate, tests logical weaknesses</div>
                 </div>
             </div>
         </div>
 
-        <button id="btn-start" class="btn-primary" disabled>Commencer la session</button>
+        <button id="btn-start" class="btn-primary" disabled data-i18n="btnStart">Start session</button>
     </div>
 
     <!-- ===== Chat Screen ===== -->
@@ -56,8 +59,8 @@
                 <span id="docs-badge" class="badge badge-docs" style="display:none"></span>
             </div>
             <div class="chat-header-right">
-                <button id="btn-end-session" class="btn-end">Terminer la session</button>
-                <button id="btn-reset" class="btn-reset">Recommencer</button>
+                <button id="btn-end-session" class="btn-end" data-i18n="btnEnd">End session</button>
+                <button id="btn-reset" class="btn-reset" data-i18n="btnRestart">Restart</button>
             </div>
         </div>
 
@@ -71,40 +74,40 @@
         </div>
 
         <div class="input-bar">
-            <input type="text" id="chat-input" placeholder="Tape ta reflexion ici...">
-            <button id="btn-send" class="btn-send">Envoyer</button>
+            <input type="text" id="chat-input" data-i18n-placeholder="chatPlaceholder" placeholder="Type your thoughts here...">
+            <button id="btn-send" class="btn-send" data-i18n="btnSend">Send</button>
         </div>
     </div>
 
     <!-- ===== Analysis Screen ===== -->
     <div id="analysis-screen" class="screen">
-        <h2>Rapport de session</h2>
+        <h2 data-i18n="reportTitle">Session Report</h2>
 
         <div class="scores-grid" id="scores-grid"></div>
 
         <div class="analysis-section">
-            <h3>Bilan</h3>
+            <h3 data-i18n="summaryTitle">Summary</h3>
             <p id="analysis-summary"></p>
         </div>
 
         <div class="analysis-section">
-            <h3>Points forts</h3>
+            <h3 data-i18n="strengthsTitle">Key strengths</h3>
             <ul id="analysis-strengths"></ul>
         </div>
 
         <div class="analysis-section">
-            <h3>Axes d'amelioration</h3>
+            <h3 data-i18n="weaknessesTitle">Areas for improvement</h3>
             <ul id="analysis-weaknesses"></ul>
         </div>
 
         <div class="analysis-section">
-            <h3>Rythme</h3>
-            <p>Reponses en moins de 8 secondes : <span id="rhythm-count" class="rhythm-badge">0</span></p>
+            <h3 data-i18n="rhythmTitle">Pace</h3>
+            <p><span data-i18n="rhythmText">Responses under 8 seconds:</span> <span id="rhythm-count" class="rhythm-badge">0</span></p>
         </div>
 
         <div class="analysis-actions">
-            <button id="btn-export" class="btn-secondary">Exporter JSON</button>
-            <button id="btn-new-session" class="btn-primary">Nouvelle session</button>
+            <button id="btn-export" class="btn-secondary" data-i18n="btnExport">Export JSON</button>
+            <button id="btn-new-session" class="btn-primary" data-i18n="btnNewSession">New session</button>
         </div>
     </div>
 

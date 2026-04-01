@@ -15,6 +15,25 @@
     --radius-sm: 8px;
 }
 
+.btn-lang {
+    position: fixed;
+    top: 12px;
+    right: 16px;
+    z-index: 100;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-lang:hover {
+    background: var(--accent);
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {

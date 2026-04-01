@@ -6,6 +6,105 @@
 (function () {
     "use strict";
 
+    /* ===== i18n ===== */
+    var LANG = {
+        en: {
+            subtitle: "Socratic Learning Companion",
+            topicLabel: "Exploration topic",
+            topicPlaceholder: "E.g.: Artificial intelligence in professional training",
+            docsLabel: "Reference documents (optional)",
+            uploadText: "Drag your files here or click to select",
+            uploadHint: "PDF, PPTX, TXT or ZIP \u2014 multiple files allowed",
+            modeLabel: "Mode",
+            modeTutor: "Tutor",
+            modeTutorDesc: "Supportive guidance, open-ended questions",
+            modeCritic: "Critic",
+            modeCriticDesc: "Devil's advocate, tests logical weaknesses",
+            btnStart: "Start session",
+            btnEnd: "End session",
+            btnRestart: "Restart",
+            chatPlaceholder: "Type your thoughts here...",
+            btnSend: "Send",
+            reportTitle: "Session Report",
+            summaryTitle: "Summary",
+            strengthsTitle: "Key strengths",
+            weaknessesTitle: "Areas for improvement",
+            rhythmTitle: "Pace",
+            rhythmText: "Responses under 8 seconds:",
+            btnExport: "Export JSON",
+            btnNewSession: "New session",
+            modeBadgeTutor: "Tutor",
+            modeBadgeCritic: "Critic",
+            errorEmpty: "No response from server. Check API configuration.",
+            errorConnection: "Connection error. Please try again.",
+            errorNoExchange: "No exchanges to analyze.",
+            errorAnalysis: "Analysis error. Please try again.",
+            startMessage: "Hello, I would like to explore the topic: ",
+            scoreLabels: ["Reasoning", "Clarity", "Skepticism", "Process", "Reflection", "Integrity"],
+            noSummary: "No summary available.",
+            langBtn: "FR"
+        },
+        fr: {
+            subtitle: "Compagnon socratique d'apprentissage",
+            topicLabel: "Sujet d'exploration",
+            topicPlaceholder: "Ex : L'intelligence artificielle en formation professionnelle",
+            docsLabel: "Documents de reference (optionnel)",
+            uploadText: "Glisse tes fichiers ici ou clique pour selectionner",
+            uploadHint: "PDF, PPTX, TXT ou ZIP \u2014 plusieurs fichiers possibles",
+            modeLabel: "Mode",
+            modeTutor: "Tuteur",
+            modeTutorDesc: "Accompagnement bienveillant, questions ouvertes",
+            modeCritic: "Critique",
+            modeCriticDesc: "Avocat du diable, teste les failles logiques",
+            btnStart: "Commencer la session",
+            btnEnd: "Terminer la session",
+            btnRestart: "Recommencer",
+            chatPlaceholder: "Tape ta reflexion ici...",
+            btnSend: "Envoyer",
+            reportTitle: "Rapport de session",
+            summaryTitle: "Bilan",
+            strengthsTitle: "Points forts",
+            weaknessesTitle: "Axes d'amelioration",
+            rhythmTitle: "Rythme",
+            rhythmText: "Reponses en moins de 8 secondes :",
+            btnExport: "Exporter JSON",
+            btnNewSession: "Nouvelle session",
+            modeBadgeTutor: "Tuteur",
+            modeBadgeCritic: "Critique",
+            errorEmpty: "Reponse vide du serveur. Verifiez la configuration API.",
+            errorConnection: "Erreur de connexion. Veuillez reessayer.",
+            errorNoExchange: "Aucun echange a analyser.",
+            errorAnalysis: "Erreur lors de l'analyse. Veuillez reessayer.",
+            startMessage: "Bonjour, je souhaite explorer le sujet : ",
+            scoreLabels: ["Raisonnement", "Clarte", "Scepticisme", "Processus", "Reflexion", "Integrite"],
+            noSummary: "Aucun bilan disponible.",
+            langBtn: "EN"
+        }
+    };
+
+    var currentLang = "en";
+
+    function t(key) {
+        return LANG[currentLang][key] || key;
+    }
+
+    function applyLanguage() {
+        document.querySelectorAll("[data-i18n]").forEach(function (el) {
+            el.textContent = t(el.dataset.i18n);
+        });
+        document.querySelectorAll("[data-i18n-placeholder]").forEach(function (el) {
+            el.placeholder = t(el.dataset.i18nPlaceholder);
+        });
+        document.getElementById("btn-lang").textContent = t("langBtn");
+        document.documentElement.lang = currentLang === "fr" ? "fr" : "en";
+        document.title = currentLang === "en" ? "AIM - Learning Companion" : "AIM - Compagnon d'apprentissage";
+    }
+
+    document.getElementById("btn-lang").addEventListener("click", function () {
+        currentLang = currentLang === "en" ? "fr" : "en";
+        applyLanguage();
+    });
+
     /* ===== State (in-memory only, lost on tab close) ===== */
     var state = {
         mode: "TUTOR",
@@ -275,7 +374,7 @@
         .then(function (data) {
             setTyping(false);
             if (!data.reply) {
-                addMessage("assistant", "Reponse vide du serveur. Verifiez la configuration API.");
+                addMessage("assistant", t("errorEmpty"));
                 btnSend.disabled = false;
                 return;
             }
@@ -291,7 +390,7 @@
         .catch(function (err) {
             setTyping(false);
             console.error("sendMessage error:", err);
-            addMessage("assistant", "Erreur: " + (err.message || "Connexion impossible. Veuillez reessayer."));
+            addMessage("assistant", err.message || t("errorConnection"));
             btnSend.disabled = false;
         });
     }
@@ -318,20 +417,17 @@
         .catch(function () {
             setTyping(false);
             btnEnd.disabled = false;
-            alert("Erreur lors de l'analyse. Veuillez reessayer.");
+            alert(t("errorAnalysis"));
         });
     }
 
     /* ===== Analysis rendering ===== */
     function renderAnalysis(data) {
-        var scores = [
-            { key: "reasoningScore", label: "Raisonnement" },
-            { key: "clarityScore", label: "Clarte" },
-            { key: "skepticismScore", label: "Scepticisme" },
-            { key: "processScore", label: "Processus" },
-            { key: "reflectionScore", label: "Reflexion" },
-            { key: "integrityScore", label: "Integrite" }
-        ];
+        var scoreKeys = ["reasoningScore", "clarityScore", "skepticismScore", "processScore", "reflectionScore", "integrityScore"];
+        var labels = t("scoreLabels");
+        var scores = scoreKeys.map(function (key, i) {
+            return { key: key, label: labels[i] };
+        });
 
         scoresGrid.innerHTML = "";
         scores.forEach(function (s) {
@@ -345,7 +441,7 @@
             scoresGrid.appendChild(card);
         });
 
-        summaryEl.textContent = data.summary || "Aucun bilan disponible.";
+        summaryEl.textContent = data.summary || t("noSummary");
 
         strengthsEl.innerHTML = "";
         (data.keyStrengths || []).forEach(function (s) {
@@ -452,7 +548,7 @@
         state.phaseTurns = 0;
         state.history = [];
         state.timestamps = [];
-        modeBadge.textContent = state.mode === "TUTOR" ? "Tuteur" : "Critique";
+        modeBadge.textContent = state.mode === "TUTOR" ? t("modeBadgeTutor") : t("modeBadgeCritic");
         topicBadge.textContent = topic;
 
         // Show doc count badge
@@ -479,7 +575,7 @@
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                message: "Bonjour, je souhaite explorer le sujet : " + state.topic,
+                message: t("startMessage") + state.topic,
                 mode: state.mode,
                 topic: state.topic,
                 phase: state.phase,
@@ -498,7 +594,7 @@
         .then(function (data) {
             setTyping(false);
             if (!data.reply) {
-                addMessage("assistant", "Reponse vide du serveur. Verifiez la configuration API.");
+                addMessage("assistant", t("errorEmpty"));
                 btnSend.disabled = false;
                 return;
             }
@@ -514,7 +610,7 @@
         .catch(function (err) {
             setTyping(false);
             console.error("startSession error:", err);
-            addMessage("assistant", "Erreur: " + (err.message || "Connexion impossible. Veuillez reessayer."));
+            addMessage("assistant", err.message || t("errorConnection"));
             btnSend.disabled = false;
         });
     }
@@ -535,7 +631,7 @@
     // End session -> analysis
     btnEnd.addEventListener("click", function () {
         if (state.history.length === 0) {
-            alert("Aucun echange a analyser.");
+            alert(t("errorNoExchange"));
             return;
         }
         requestAnalysis();
@@ -552,5 +648,8 @@
 
     // Load existing docs on startup
     loadDocumentList();
+
+    // Apply default language
+    applyLanguage();
 
 })();
