@@ -1,6 +1,7 @@
 """FastAPI application for AIM Learning Companion."""
 
 import logging
+import os
 import re
 import traceback
 from contextlib import asynccontextmanager
@@ -29,6 +30,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="AIM Learning Companion", lifespan=lifespan)
 
 STATIC_DIR = Path(__file__).parent.parent / "static"
+CORPUS_DIR = Path(__file__).parent.parent / "corpus"
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 ALLOWED_EXTENSIONS = {".txt", ".pdf", ".pptx", ".ppt", ".zip"}
@@ -39,7 +41,7 @@ class ChatRequest(BaseModel):
     mode: str = "TUTOR"
     topic: str = ""
     phase: int = 0
-    phase_turns: int = 0  # how many turns spent in current phase
+    phase_turns: int = 0
     history: list[dict] = []
 
 
@@ -72,27 +74,54 @@ async def index():
     return FileResponse(str(STATIC_DIR / "index.html"))
 
 
-def _detect_phase(reply: str, current_phase: int) -> int:
-    """Extract phase number from the companion's reply."""
-    match = re.search(r"Phase:\s*(\d)", reply)
-    if match:
-        return int(match.group(1))
-    return current_phase
+@app.get("/download/{filename}")
+async def download_file(filename: str):
+    """Serve a file from the corpus directory for download."""
+    file_path = CORPUS_DIR / filename
+    if not file_path.exists() or not file_path.is_file():
+        return JSONResponse(status_code=404, content={"error": "Fichier non trouvé"})
+    return FileResponse(str(file_path), filename=filename)
+
+
+MAX_TURNS_PER_PHASE = 2
+
+
+def _compute_phase(current_phase: int, phase_turns: int) -> tuple[int, int]:
+    """Advance phase based on conversation depth.
+
+    Returns (new_phase, new_phase_turns).
+    Phase advances after MAX_TURNS_PER_PHASE learner turns in the same phase.
+    """
+    new_turns = phase_turns + 1
+    if new_turns >= MAX_TURNS_PER_PHASE and current_phase < 4:
+        return current_phase + 1, 0
+    return current_phase, new_turns
 
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def api_chat(req: ChatRequest):
+    api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    base_url = os.environ.get("LLM_BASE_URL", "").strip()
+    model = os.environ.get("LLM_MODEL", "").strip()
+    if not api_key:
+        logger.error("OPENROUTER_API_KEY is not set!")
+        return JSONResponse(status_code=500, content={"error": "Cle API non configuree (OPENROUTER_API_KEY manquant)"})
+
     try:
+        # Compute phase progression server-side
+        new_phase, new_phase_turns = _compute_phase(req.phase, req.phase_turns)
+        logger.info(f"Chat request: mode={req.mode}, topic={req.topic[:50]}, phase={req.phase}->{new_phase}, turns={req.phase_turns}->{new_phase_turns}, model={model}")
+
         rag_chunks = retrieve(req.message)
-        system_prompt = build_system_prompt(req.mode, req.topic, req.phase, rag_chunks)
+        system_prompt = build_system_prompt(req.mode, req.topic, new_phase, rag_chunks)
 
         messages = [{"role": m["role"], "content": m["content"]} for m in req.history]
         messages.append({"role": "user", "content": req.message})
 
         reply = await chat(system_prompt, messages)
-        detected_phase = _detect_phase(reply, req.phase)
+        logger.info(f"LLM reply received ({len(reply)} chars)")
 
-        return ChatResponse(reply=reply, phase=detected_phase)
+        return ChatResponse(reply=reply, phase=new_phase, phase_turns=new_phase_turns)
     except Exception as e:
         logger.error(f"Chat error: {e}\n{traceback.format_exc()}")
         return JSONResponse(status_code=500, content={"error": str(e)})
@@ -107,7 +136,7 @@ async def api_upload(files: List[UploadFile] = File(...)):
     for f in files:
         ext = Path(f.filename).suffix.lower() if f.filename else ""
         if ext not in ALLOWED_EXTENSIONS:
-            skipped.append({"filename": f.filename, "reason": f"Type non support\u00e9: {ext}"})
+            skipped.append({"filename": f.filename, "reason": f"Type non supporté: {ext}"})
             continue
         content = await f.read()
         file_data.append((f.filename, content))
@@ -128,7 +157,7 @@ async def api_delete_document(filename: str):
     ok = delete_document(filename)
     if ok:
         return {"status": "ok"}
-    return {"status": "error", "message": "Fichier non trouv\u00e9"}
+    return {"status": "error", "message": "Fichier non trouvé"}
 
 
 @app.post("/api/analyze", response_model=AnalysisResponse)
@@ -159,7 +188,6 @@ async def api_analyze(req: AnalysisRequest):
 
 @app.get("/api/health")
 async def health():
-    import os
     return {
         "status": "ok",
         "has_api_key": bool(os.environ.get("OPENROUTER_API_KEY", "")),

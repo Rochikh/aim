@@ -11,6 +11,7 @@
         mode: "TUTOR",
         topic: "",
         phase: 0,
+        phaseTurns: 0,
         history: [],      // {role, content}
         timestamps: [],   // epoch ms for every message (user & assistant alternating)
         analysisResult: null,
@@ -94,10 +95,17 @@
     }
 
     /* ===== Messages ===== */
+    function stripPhaseMarker(text) {
+        // Remove "---\nPhase: ..." block from the end of assistant messages
+        var idx = text.indexOf("\n---");
+        if (idx === -1) idx = text.indexOf("---\nPhase");
+        return idx >= 0 ? text.substring(0, idx).trim() : text;
+    }
+
     function addMessage(role, content) {
         var div = document.createElement("div");
         div.className = "message " + role;
-        div.textContent = content;
+        div.textContent = role === "assistant" ? stripPhaseMarker(content) : content;
         messagesEl.insertBefore(div, typingEl);
         messagesEl.scrollTop = messagesEl.scrollHeight;
     }
@@ -252,13 +260,27 @@
                 mode: state.mode,
                 topic: state.topic,
                 phase: state.phase,
+                phase_turns: state.phaseTurns,
                 history: state.history.slice(0, -1)
             })
         })
-        .then(function (res) { return res.json(); })
+        .then(function (res) {
+            if (!res.ok) {
+                return res.json().then(function (err) {
+                    throw new Error(err.error || "Erreur serveur " + res.status);
+                });
+            }
+            return res.json();
+        })
         .then(function (data) {
             setTyping(false);
+            if (!data.reply) {
+                addMessage("assistant", "Reponse vide du serveur. Verifiez la configuration API.");
+                btnSend.disabled = false;
+                return;
+            }
             state.phase = data.phase;
+            state.phaseTurns = data.phase_turns || 0;
             state.history.push({ role: "assistant", content: data.reply });
             state.timestamps.push(Date.now());
             addMessage("assistant", data.reply);
@@ -268,7 +290,8 @@
         })
         .catch(function (err) {
             setTyping(false);
-            addMessage("assistant", "Erreur de connexion. Veuillez reessayer.");
+            console.error("sendMessage error:", err);
+            addMessage("assistant", "Erreur: " + (err.message || "Connexion impossible. Veuillez reessayer."));
             btnSend.disabled = false;
         });
     }
@@ -364,6 +387,7 @@
         state.mode = "TUTOR";
         state.topic = "";
         state.phase = 0;
+        state.phaseTurns = 0;
         state.history = [];
         state.timestamps = [];
         state.analysisResult = null;
@@ -424,6 +448,10 @@
         if (!topic) return;
 
         state.topic = topic;
+        state.phase = 0;
+        state.phaseTurns = 0;
+        state.history = [];
+        state.timestamps = [];
         modeBadge.textContent = state.mode === "TUTOR" ? "Tuteur" : "Critique";
         topicBadge.textContent = topic;
 
@@ -455,13 +483,27 @@
                 mode: state.mode,
                 topic: state.topic,
                 phase: state.phase,
+                phase_turns: state.phaseTurns,
                 history: []
             })
         })
-        .then(function (res) { return res.json(); })
+        .then(function (res) {
+            if (!res.ok) {
+                return res.json().then(function (err) {
+                    throw new Error(err.error || "Erreur serveur " + res.status);
+                });
+            }
+            return res.json();
+        })
         .then(function (data) {
             setTyping(false);
+            if (!data.reply) {
+                addMessage("assistant", "Reponse vide du serveur. Verifiez la configuration API.");
+                btnSend.disabled = false;
+                return;
+            }
             state.phase = data.phase;
+            state.phaseTurns = data.phase_turns || 0;
             state.history.push({ role: "assistant", content: data.reply });
             state.timestamps.push(Date.now());
             addMessage("assistant", data.reply);
@@ -469,9 +511,10 @@
             btnSend.disabled = false;
             chatInput.focus();
         })
-        .catch(function () {
+        .catch(function (err) {
             setTyping(false);
-            addMessage("assistant", "Erreur de connexion. Veuillez reessayer.");
+            console.error("startSession error:", err);
+            addMessage("assistant", "Erreur: " + (err.message || "Connexion impossible. Veuillez reessayer."));
             btnSend.disabled = false;
         });
     }

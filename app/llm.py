@@ -1,9 +1,12 @@
 """LLM interaction via OpenAI-compatible API."""
 
 import json
+import logging
 import os
 
 from openai import AsyncOpenAI
+
+logger = logging.getLogger(__name__)
 
 _client: AsyncOpenAI | None = None
 
@@ -11,13 +14,13 @@ _client: AsyncOpenAI | None = None
 def _get_client() -> AsyncOpenAI:
     global _client
     if _client is None:
-        api_key = os.environ.get("OPENROUTER_API_KEY", "")
-        base_url = os.environ.get("LLM_BASE_URL", "") or None
+        api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+        base_url = os.environ.get("LLM_BASE_URL", "").strip() or None
         _client = AsyncOpenAI(api_key=api_key, base_url=base_url)
     return _client
 
 # ---------------------------------------------------------------------------
-# System prompts (verbatim from spec)
+# System prompts
 # ---------------------------------------------------------------------------
 
 SYSTEM_TUTOR = """Tu es un mentor socratique bienveillant, empathique et complice.
@@ -31,9 +34,12 @@ Règles :
 4. Si une définition est demandée, explique en max 2 phrases puis pose immédiatement une question de vérification.
 5. Dès qu'une base est posée en Phase 1, avance vers Phase 2.
 6. Préfère l'invitation au reproche : "Ce point semble complexe, essayons un autre angle..."
+7. INTERDIT : ne propose JAMAIS d'exemples, de listes d'options ou de choix multiples dans tes questions. L'apprenant·e doit produire le contenu. Mauvais : "Par exemple, X, Y ou Z ?" — Bon : "Donne-moi un exemple concret issu de ta propre expérience."
+8. Ta question doit être ouverte et exiger que l'apprenant·e formule sa propre réponse.
+9. Interdit absolu : "Excellent", "Très bien", "Parfait", "Bravo", "Super", "C'est une excellente question", "Absolument", "Exactement" et tout équivalent enthousiaste. Validation autorisée : une phrase neutre et courte maximum ("C'est une piste.", "Je vois ce que tu veux dire.") avant de poser la question suivante.
 À la fin de chaque message, ajoute obligatoirement :
 ---
-Phase: [Numéro]
+Phase: {phase}
 Mode : Tuteur
 Sujet d'exploration : "{topic}"
 Contexte du cours (extrait RAG) :
@@ -50,9 +56,12 @@ Règles :
 4. Si une définition est demandée, explique en max 2 phrases puis pose immédiatement une question de vérification.
 5. Dès qu'une base est posée en Phase 1, avance vers Phase 2.
 6. Préfère l'invitation au reproche : "Ce point semble complexe, essayons un autre angle..."
+7. INTERDIT : ne propose JAMAIS d'exemples, de listes d'options ou de choix multiples dans tes questions. L'apprenant·e doit produire le contenu. Mauvais : "Par exemple, X, Y ou Z ?" — Bon : "Donne-moi un exemple concret issu de ta propre expérience."
+8. Ta question doit être ouverte et exiger que l'apprenant·e formule sa propre réponse.
+9. Interdit absolu : "Excellent", "Très bien", "Parfait", "Bravo", "Super", "C'est une excellente question", "Absolument", "Exactement" et tout équivalent enthousiaste. Validation autorisée : une phrase neutre et courte maximum ("C'est une piste.", "Je vois ce que tu veux dire.") avant de poser la question suivante.
 À la fin de chaque message, ajoute obligatoirement :
 ---
-Phase: [Numéro]
+Phase: {phase}
 Mode : Critique
 Ta mission : proposer des raisonnements fallacieux pour tester la vigilance.
 Reste un partenaire de jeu élégant, jamais méprisant.
@@ -89,7 +98,10 @@ def build_system_prompt(mode: str, topic: str, phase: int, rag_chunks: list[str]
     template = SYSTEM_TUTOR if mode == "TUTOR" else SYSTEM_CRITIC
 
     rag_text = "\n---\n".join(rag_chunks) if rag_chunks else "(aucun document chargé)"
-    prompt = template.replace("{topic}", topic).replace("{rag_context}", rag_text)
+    prompt = (template
+              .replace("{topic}", topic)
+              .replace("{rag_context}", rag_text)
+              .replace("{phase}", str(phase)))
 
     prompt += f"\n\n{PHASE_GUIDANCE.get(phase, PHASE_GUIDANCE[0])}"
 
@@ -99,14 +111,19 @@ def build_system_prompt(mode: str, topic: str, phase: int, rag_chunks: list[str]
 async def chat(system_prompt: str, messages: list[dict]) -> str:
     """Send chat completion request and return assistant message."""
     client = _get_client()
-    model = os.environ.get("LLM_MODEL", "mistralai/mistral-7b-instruct")
+    model = os.environ.get("LLM_MODEL", "openrouter/free").strip()
     api_messages = [{"role": "system", "content": system_prompt}] + messages
+
+    logger.info(f"LLM call: model={model!r}, messages={len(api_messages)}, system_prompt_len={len(system_prompt)}")
 
     response = await client.chat.completions.create(
         model=model,
         messages=api_messages,
+        timeout=60,
     )
-    return response.choices[0].message.content
+    reply = response.choices[0].message.content
+    logger.info(f"LLM response: {len(reply)} chars")
+    return reply
 
 
 async def analyze_session(messages: list[dict]) -> dict:
@@ -117,7 +134,7 @@ async def analyze_session(messages: list[dict]) -> dict:
     )
 
     analysis_messages = [
-        {"role": "user", "content": f"Voici la conversation \u00e0 analyser :\n\n{conversation_text}"}
+        {"role": "user", "content": f"Voici la conversation à analyser :\n\n{conversation_text}"}
     ]
 
     raw = await chat(ANALYSIS_SYSTEM, analysis_messages)
