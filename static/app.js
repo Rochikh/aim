@@ -360,6 +360,7 @@
                 topic: state.topic,
                 phase: state.phase,
                 phase_turns: state.phaseTurns,
+                lang: currentLang,
                 history: state.history.slice(0, -1)
             })
         })
@@ -580,6 +581,7 @@
                 topic: state.topic,
                 phase: state.phase,
                 phase_turns: state.phaseTurns,
+                lang: currentLang,
                 history: []
             })
         })

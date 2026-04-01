@@ -93,7 +93,13 @@ Produis un JSON strict avec cette structure :
 Réponds UNIQUEMENT avec le JSON, sans texte autour."""
 
 
-def build_system_prompt(mode: str, topic: str, phase: int, rag_chunks: list[str]) -> str:
+LANG_INSTRUCTION = {
+    "en": "\n\nIMPORTANT: You MUST respond entirely in English.",
+    "fr": "\n\nIMPORTANT: Tu DOIS répondre entièrement en français.",
+}
+
+
+def build_system_prompt(mode: str, topic: str, phase: int, rag_chunks: list[str], lang: str = "en") -> str:
     """Build the full system prompt with mode, phase guidance, and RAG context."""
     template = SYSTEM_TUTOR if mode == "TUTOR" else SYSTEM_CRITIC
 
@@ -104,6 +110,7 @@ def build_system_prompt(mode: str, topic: str, phase: int, rag_chunks: list[str]
               .replace("{phase}", str(phase)))
 
     prompt += f"\n\n{PHASE_GUIDANCE.get(phase, PHASE_GUIDANCE[0])}"
+    prompt += LANG_INSTRUCTION.get(lang, LANG_INSTRUCTION["en"])
 
     return prompt
 

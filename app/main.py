@@ -42,6 +42,7 @@ class ChatRequest(BaseModel):
     topic: str = ""
     phase: int = 0
     phase_turns: int = 0
+    lang: str = "en"
     history: list[dict] = []
 
 
@@ -113,7 +114,7 @@ async def api_chat(req: ChatRequest):
         logger.info(f"Chat request: mode={req.mode}, topic={req.topic[:50]}, phase={req.phase}->{new_phase}, turns={req.phase_turns}->{new_phase_turns}, model={model}")
 
         rag_chunks = retrieve(req.message)
-        system_prompt = build_system_prompt(req.mode, req.topic, new_phase, rag_chunks)
+        system_prompt = build_system_prompt(req.mode, req.topic, new_phase, rag_chunks, req.lang)
 
         messages = [{"role": m["role"], "content": m["content"]} for m in req.history]
         messages.append({"role": "user", "content": req.message})
